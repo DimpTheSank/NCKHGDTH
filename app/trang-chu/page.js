@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { getCookie, deleteCookie } from '@/lib/cookies'
 
 const activities = [
   { title: 'Xây dựng câu', detail: 'Bài tập tuần 12', color: 'border-orange-200 bg-orange-50' },
@@ -27,7 +28,7 @@ export default function Page() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const taiKhoan = localStorage.getItem('taiKhoan')
+    const taiKhoan = getCookie('taiKhoan')
 
     if (!taiKhoan) {
       router.push('/')
@@ -40,7 +41,7 @@ export default function Page() {
         const userSnap = await getDoc(userRef)
 
         if (!userSnap.exists()) {
-          localStorage.removeItem('taiKhoan')
+          deleteCookie('taiKhoan')
           router.push('/')
           return
         }
@@ -58,7 +59,7 @@ export default function Page() {
   }, [router])
 
   const handleLogout = () => {
-    localStorage.removeItem('taiKhoan')
+    deleteCookie('taiKhoan')
     router.push('/')
   }
 

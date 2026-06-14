@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { getCookie, setCookie } from '@/lib/cookies'
 
 export default function Page() {
   const router = useRouter()
@@ -12,6 +13,41 @@ export default function Page() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
+
+  useEffect(() => {
+    const taiKhoan = getCookie('taiKhoan')
+
+    if (!taiKhoan) {
+      setCheckingSession(false)
+      return
+    }
+
+    const checkSession = async () => {
+      try {
+        const userRef = doc(db, 'users', taiKhoan)
+        const userSnap = await getDoc(userRef)
+
+        if (!userSnap.exists()) {
+          setCheckingSession(false)
+          return
+        }
+
+        const userData = userSnap.data()
+
+        if (userData.vaiTro === 'Học sinh') {
+          router.push('/trang-chu')
+        } else {
+          router.push('/trang-chu-gv')
+        }
+      } catch (err) {
+        console.error(err)
+        setCheckingSession(false)
+      }
+    }
+
+    checkSession()
+  }, [router])
 
   const handleLogin = async () => {
     setError('')
@@ -40,7 +76,7 @@ export default function Page() {
         return
       }
 
-      localStorage.setItem('taiKhoan', username)
+      setCookie('taiKhoan', username)
 
       if (userData.vaiTro === 'Học sinh') {
         router.push('/trang-chu')
@@ -58,6 +94,14 @@ export default function Page() {
     if (e.key === 'Enter') {
       handleLogin()
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-[#f7f8fc] flex items-center justify-center">
+        <p className="text-sm font-semibold text-gray-500">Đang tải...</p>
+      </div>
+    )
   }
 
   return (
