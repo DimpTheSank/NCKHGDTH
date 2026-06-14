@@ -6,10 +6,10 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getCookie, deleteCookie } from '@/lib/cookies'
 
-const activities = [
-  { title: 'Xây dựng câu', detail: 'Bài tập tuần 12', color: 'border-orange-200 bg-orange-50' },
-  { title: 'Đặt câu theo hình', detail: 'Chủ đề mùa xuân', color: 'border-emerald-200 bg-emerald-50' },
-  { title: 'Luyện trạng ngữ', detail: 'Ôn tập cùng giáo viên', color: 'border-sky-200 bg-sky-50' },
+const games = [
+  { title: 'Trò chơi 1', currentLevel: 'Màn 1', targetLevel: 'Màn 5', href: '/tro-choi-1', color: 'border-orange-200 bg-orange-50' },
+  { title: 'Trò chơi 2', currentLevel: 'Màn 1', targetLevel: 'Màn 5', href: '/tro-choi-2', color: 'border-emerald-200 bg-emerald-50' },
+  { title: 'Trò chơi 3', currentLevel: 'Màn 1', targetLevel: 'Màn 5', href: '/tro-choi-3', color: 'border-sky-200 bg-sky-50' },
 ]
 
 const sampleLeaderboard = [
@@ -111,7 +111,7 @@ export default function Page() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-extrabold text-slate-900">Nhiệm vụ hôm nay</h2>
-              <p className="mt-1 text-sm text-slate-500">Chọn một hoạt động để tiếp tục học.</p>
+              <p className="mt-1 text-sm text-slate-500">Chọn một trò chơi để tiếp tục học.</p>
             </div>
             <div className="rounded-md bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
               Đang hoạt động
@@ -119,14 +119,23 @@ export default function Page() {
           </div>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
-            {activities.map((activity) => (
-              <button
-                key={activity.title}
-                className={`min-h-32 rounded-lg border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md ${activity.color}`}
+            {games.map((game) => (
+              <div
+                key={game.title}
+                className={`flex min-h-40 flex-col justify-between rounded-lg border p-4 transition hover:-translate-y-0.5 hover:shadow-md ${game.color}`}
               >
-                <p className="text-base font-extrabold text-slate-900">{activity.title}</p>
-                <p className="mt-2 text-sm font-semibold text-slate-600">{activity.detail}</p>
-              </button>
+                <div>
+                  <p className="text-base font-extrabold text-slate-900">{game.title}</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">Màn hiện tại: {game.currentLevel}</p>
+                  <p className="text-sm font-semibold text-slate-600">Mục tiêu: {game.targetLevel}</p>
+                </div>
+                <button
+                  onClick={() => router.push(game.href)}
+                  className="mt-4 rounded-md bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600"
+                >
+                  Chơi ngay
+                </button>
+              </div>
             ))}
           </div>
         </section>
