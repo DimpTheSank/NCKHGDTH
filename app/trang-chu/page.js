@@ -19,6 +19,8 @@ const sampleLeaderboard = [
   { name: 'Đỗ Gia Hân', points: 1100 },
 ]
 
+const XP_PER_LEVEL = 1000
+
 export default function Page() {
   const router = useRouter()
   const [user, setUser] = useState(null)
@@ -68,10 +70,14 @@ export default function Page() {
     )
   }
 
+  const cap = Number(user.cap) || 1
+  const kinhNghiem = Number(user.kinhNghiem) || 0
+  const progress = Math.min(100, Math.round((kinhNghiem / XP_PER_LEVEL) * 100))
+
   return (
     <main className="min-h-screen bg-[#f6f7fb]">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-5 py-4">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-orange-600">EduGame</p>
             <h1 className="text-2xl font-extrabold text-slate-900">
@@ -79,6 +85,17 @@ export default function Page() {
             </h1>
             <p className="text-sm font-semibold text-slate-500">Lớp {user.lop}</p>
           </div>
+
+          <div className="flex-1 min-w-[200px] max-w-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-extrabold text-slate-700">Cấp {cap}</span>
+              <span className="text-xs font-semibold text-slate-500">{kinhNghiem}/{XP_PER_LEVEL} KN</span>
+            </div>
+            <div className="progress-bar-track">
+              <div className="progress-bar-fill bg-orange-500" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+
           <button
             onClick={handleLogout}
             className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
