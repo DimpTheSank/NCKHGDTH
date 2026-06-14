@@ -137,6 +137,9 @@ export default function Page() {
     const isCorrect = currentQuestion.options[selectedIndex].correct
     setFeedback(isCorrect ? 'correct' : 'wrong')
 
+    const audio = new Audio(isCorrect ? '/audio/dung.mp3' : '/audio/sai.mp3')
+    audio.play().catch(() => {})
+
     const newCorrectCount = correctCount + (isCorrect ? 1 : 0)
     setCorrectCount(newCorrectCount)
 
