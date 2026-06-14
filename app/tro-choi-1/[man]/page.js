@@ -221,15 +221,17 @@ export default function Page() {
           </div>
         </div>
 
-        {feedback && (
-          <p
-            className={`text-center font-extrabold mb-4 ${
-              feedback === 'correct' ? 'text-green-soft' : 'text-red-soft'
-            }`}
-          >
-            {feedback === 'correct' ? 'Chính xác!' : 'Chưa đúng rồi!'}
-          </p>
-        )}
+        <div className="h-6 mb-4">
+          {feedback && (
+            <p
+              className={`text-center font-extrabold ${
+                feedback === 'correct' ? 'text-green-soft' : 'text-red-soft'
+              }`}
+            >
+              {feedback === 'correct' ? 'Chính xác!' : 'Chưa đúng rồi!'}
+            </p>
+          )}
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           {currentQuestion.options.map((option, index) => {
