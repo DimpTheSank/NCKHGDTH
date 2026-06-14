@@ -38,6 +38,7 @@ export default function Page() {
 
   const [selectedIndex, setSelectedIndex] = useState(null)
   const [feedback, setFeedback] = useState(null) // 'correct' | 'wrong' | null
+  const [checked, setChecked] = useState(false)
   const [showComplete, setShowComplete] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
 
@@ -124,10 +125,16 @@ export default function Page() {
   const currentQuestion = questions[currentIndex]
 
   const handleSelect = (index) => {
-    if (selectedIndex !== null) return
+    if (checked) return
 
-    setSelectedIndex(index)
-    const isCorrect = currentQuestion.options[index].correct
+    setSelectedIndex((prev) => (prev === index ? null : index))
+  }
+
+  const handleConfirm = () => {
+    if (selectedIndex === null || checked) return
+
+    setChecked(true)
+    const isCorrect = currentQuestion.options[selectedIndex].correct
     setFeedback(isCorrect ? 'correct' : 'wrong')
 
     const newCorrectCount = correctCount + (isCorrect ? 1 : 0)
@@ -136,6 +143,7 @@ export default function Page() {
     setTimeout(() => {
       setSelectedIndex(null)
       setFeedback(null)
+      setChecked(false)
 
       if (currentIndex + 1 < questions.length) {
         setCurrentIndex((prev) => prev + 1)
@@ -215,8 +223,27 @@ export default function Page() {
             <div className="flex-1 rounded-xl border-2 border-orange-200 bg-orange-50 p-4 flex items-center justify-center text-center">
               <p className="text-base font-extrabold text-slate-900">{currentQuestion.cn}</p>
             </div>
-            <div className="flex-1 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 flex items-center justify-center text-center">
-              <p className="text-base font-bold text-slate-300">...........................</p>
+            <div
+              className={`flex-1 rounded-xl border-2 p-4 flex items-center justify-center text-center transition ${
+                selectedIndex === null
+                  ? 'border-dashed border-slate-300 bg-slate-50'
+                  : checked
+                  ? feedback === 'correct'
+                    ? 'border-solid border-green-soft bg-green-light shake'
+                    : 'border-solid border-red-soft bg-red-light shake'
+                  : 'border-solid border-orange-300 bg-orange-50 cursor-pointer'
+              }`}
+              onClick={() => {
+                if (selectedIndex !== null) handleSelect(selectedIndex)
+              }}
+            >
+              {selectedIndex === null ? (
+                <p className="text-base font-bold text-slate-300">...........................</p>
+              ) : (
+                <p className="text-base font-extrabold text-slate-900">
+                  {currentQuestion.options[selectedIndex].text}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -233,29 +260,32 @@ export default function Page() {
           )}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 mb-6">
           {currentQuestion.options.map((option, index) => {
-            let extraClass = 'border-gray-200 bg-white hover:border-orange-300'
-
-            if (selectedIndex === index) {
-              extraClass =
-                feedback === 'correct'
-                  ? 'border-green-soft bg-green-light shake'
-                  : 'border-red-soft bg-red-light shake'
+            if (index === selectedIndex) {
+              return <div key={index} className="rounded-xl border-2 border-transparent p-4" />
             }
 
             return (
               <button
                 key={index}
                 onClick={() => handleSelect(index)}
-                disabled={selectedIndex !== null}
-                className={`rounded-xl border-2 p-4 text-sm font-semibold text-slate-700 text-left transition disabled:cursor-not-allowed ${extraClass}`}
+                disabled={checked}
+                className="rounded-xl border-2 border-gray-200 bg-white hover:border-orange-300 p-4 text-sm font-semibold text-slate-700 text-left transition disabled:cursor-not-allowed"
               >
                 {option.text}
               </button>
             )
           })}
         </div>
+
+        <button
+          onClick={handleConfirm}
+          disabled={selectedIndex === null || checked}
+          className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors"
+        >
+          Xác nhận
+        </button>
       </div>
 
       {showComplete && (
