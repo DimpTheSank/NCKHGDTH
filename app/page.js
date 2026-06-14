@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 
 export default function Page() {
   const router = useRouter()
