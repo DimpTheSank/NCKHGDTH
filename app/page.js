@@ -40,6 +40,8 @@ export default function Page() {
         return
       }
 
+      localStorage.setItem('taiKhoan', username)
+
       if (userData.vaiTro === 'Học sinh') {
         router.push('/trang-chu')
       } else {

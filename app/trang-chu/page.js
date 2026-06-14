@@ -1,14 +1,9 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-const demoStudent = {
-  name: 'Nguyễn Văn An',
-  className: 'Lớp 4A',
-  rank: 12,
-  points: 1250,
-  nextLevel: 2000,
-}
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 const activities = [
   { title: 'Xây dựng câu', detail: 'Bài tập tuần 12', color: 'border-orange-200 bg-orange-50' },
@@ -16,9 +11,62 @@ const activities = [
   { title: 'Luyện trạng ngữ', detail: 'Ôn tập cùng giáo viên', color: 'border-sky-200 bg-sky-50' },
 ]
 
+const sampleLeaderboard = [
+  { name: 'Trần Thị Bình', points: 1820 },
+  { name: 'Lê Hoàng Nam', points: 1640 },
+  { name: 'Phạm Minh Khuê', points: 1490 },
+  { name: 'Nguyễn Văn An', points: 1250 },
+  { name: 'Đỗ Gia Hân', points: 1100 },
+]
+
 export default function Page() {
   const router = useRouter()
-  const progress = Math.round((demoStudent.points / demoStudent.nextLevel) * 100)
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const taiKhoan = localStorage.getItem('taiKhoan')
+
+    if (!taiKhoan) {
+      router.push('/')
+      return
+    }
+
+    const fetchUser = async () => {
+      try {
+        const userRef = doc(db, 'users', taiKhoan)
+        const userSnap = await getDoc(userRef)
+
+        if (!userSnap.exists()) {
+          localStorage.removeItem('taiKhoan')
+          router.push('/')
+          return
+        }
+
+        setUser(userSnap.data())
+      } catch (err) {
+        console.error(err)
+        router.push('/')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
+  }, [router])
+
+  const handleLogout = () => {
+    localStorage.removeItem('taiKhoan')
+    router.push('/')
+  }
+
+  if (loading || !user) {
+    return (
+      <main className="min-h-screen bg-[#f6f7fb] flex items-center justify-center">
+        <p className="text-sm font-semibold text-slate-500">Đang tải...</p>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f7fb]">
@@ -26,11 +74,13 @@ export default function Page() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-orange-600">EduGame</p>
-            <h1 className="text-2xl font-extrabold text-slate-900">Xin chào, {demoStudent.name}</h1>
-            <p className="text-sm font-semibold text-slate-500">{demoStudent.className} · Xếp hạng #{demoStudent.rank}</p>
+            <h1 className="text-2xl font-extrabold text-slate-900">
+              {user.vaiTro}: {user.ho} {user.ten}
+            </h1>
+            <p className="text-sm font-semibold text-slate-500">Lớp {user.lop}</p>
           </div>
           <button
-            onClick={() => router.push('/')}
+            onClick={handleLogout}
             className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
           >
             Đăng xuất
@@ -64,14 +114,21 @@ export default function Page() {
         </section>
 
         <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-extrabold text-slate-900">Tiến bộ</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            {demoStudent.points.toLocaleString('vi-VN')} / {demoStudent.nextLevel.toLocaleString('vi-VN')} điểm
-          </p>
-          <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full rounded-full bg-orange-500" style={{ width: `${progress}%` }} />
-          </div>
-          <p className="mt-3 text-sm font-bold text-slate-700">Hoàn thành {progress}% mục tiêu cấp tiếp theo.</p>
+          <h2 className="text-lg font-extrabold text-slate-900">Bảng xếp hạng</h2>
+          <p className="mt-1 text-sm text-slate-500">Top học sinh tích cực (ví dụ)</p>
+          <ul className="mt-4 space-y-3">
+            {sampleLeaderboard.map((item, index) => (
+              <li key={item.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-700">{item.name}</span>
+                </div>
+                <span className="text-sm font-bold text-orange-600">{item.points.toLocaleString('vi-VN')}</span>
+              </li>
+            ))}
+          </ul>
         </aside>
       </div>
     </main>
