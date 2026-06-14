@@ -100,7 +100,7 @@ export default function Page() {
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           {levels.map((item) => {
             const hasScore = item.score !== null && item.score !== undefined
-            const stars = hasScore ? Math.max(1, Math.round((Number(item.score) / 5) * 3)) : 0
+            const stars = hasScore ? Number(item.score) : 0
 
             return (
               <div
@@ -122,7 +122,7 @@ export default function Page() {
                   <div>
                     <p className="text-lg font-extrabold text-slate-900">Màn {item.level}</p>
                     <div className="flex items-center gap-1 mt-1">
-                      {[1, 2, 3].map((i) => (
+                      {[1, 2, 3, 4, 5].map((i) => (
                         <span key={i} className={i <= stars ? 'text-gold' : 'text-slate-200'}>
                           ★
                         </span>
