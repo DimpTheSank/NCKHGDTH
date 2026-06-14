@@ -1,10 +1,61 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 export default function Page() {
+  const router = useRouter()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleLogin = async () => {
+    setError('')
+
+    if (!username || !password) {
+      setError('Vui lòng nhập đầy đủ tài khoản và mật khẩu')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const userRef = doc(db, 'users', username)
+      const userSnap = await getDoc(userRef)
+
+      if (!userSnap.exists()) {
+        setError('Tài khoản không tồn tại')
+        setLoading(false)
+        return
+      }
+
+      const userData = userSnap.data()
+
+      if (userData.matKhau !== password) {
+        setError('Sai mật khẩu')
+        setLoading(false)
+        return
+      }
+
+      if (userData.vaiTro === 'Học sinh') {
+        router.push('/trang-chu')
+      } else {
+        router.push('/trang-chu-gv')
+      }
+    } catch (err) {
+      console.error(err)
+      setError('Đã có lỗi xảy ra, vui lòng thử lại')
+      setLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleLogin()
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f8fc] flex items-center justify-center">
@@ -24,6 +75,7 @@ export default function Page() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Nhập tên đăng nhập"
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent transition"
             />
@@ -37,13 +89,22 @@ export default function Page() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Nhập mật khẩu"
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent transition"
             />
           </div>
 
-          <button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-colors mt-2">
-            Đăng nhập
+          {error && (
+            <p className="text-sm text-red-soft font-medium">{error}</p>
+          )}
+
+          <button
+            onClick={handleLogin}
+            disabled={loading}
+            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors mt-2"
+          >
+            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </div>
       </div>
