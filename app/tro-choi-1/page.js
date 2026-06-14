@@ -98,30 +98,53 @@ export default function Page() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-          {levels.map((item) => (
-            <div
-              key={item.level}
-              className={`card p-5 flex flex-col justify-between ${!item.unlocked ? 'opacity-60' : ''}`}
-            >
-              <div>
-                <p className="text-lg font-extrabold text-slate-900">Màn {item.level}</p>
-                <p className="mt-2 text-sm font-semibold text-slate-600">
-                  Điểm cao nhất:{' '}
-                  {item.score !== null && item.score !== undefined
-                    ? `${item.score}/5`
-                    : 'Chưa chơi'}
-                </p>
-              </div>
+          {levels.map((item) => {
+            const hasScore = item.score !== null && item.score !== undefined
+            const stars = hasScore ? Math.max(1, Math.round((Number(item.score) / 5) * 3)) : 0
 
-              <button
-                onClick={() => router.push(`/tro-choi-1/${item.level}`)}
-                disabled={!item.unlocked}
-                className="mt-4 rounded-md bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+            return (
+              <div
+                key={item.level}
+                className={`card relative overflow-hidden p-5 flex flex-col justify-between transition ${
+                  item.unlocked
+                    ? 'border-orange-200 hover:-translate-y-0.5 hover:shadow-md'
+                    : 'opacity-60'
+                }`}
               >
-                {item.unlocked ? 'Chơi' : 'Khóa'}
-              </button>
-            </div>
-          ))}
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-extrabold ${
+                      item.unlocked ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-400'
+                    }`}
+                  >
+                    {item.unlocked ? item.level : '🔒'}
+                  </div>
+                  <div>
+                    <p className="text-lg font-extrabold text-slate-900">Màn {item.level}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      {[1, 2, 3].map((i) => (
+                        <span key={i} className={i <= stars ? 'text-gold' : 'text-slate-200'}>
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-sm font-semibold text-slate-600">
+                  {hasScore ? `Điểm cao nhất: ${item.score}/5` : 'Chưa chơi'}
+                </p>
+
+                <button
+                  onClick={() => router.push(`/tro-choi-1/${item.level}`)}
+                  disabled={!item.unlocked}
+                  className="mt-4 rounded-md bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {item.unlocked ? 'Chơi' : 'Khóa'}
+                </button>
+              </div>
+            )
+          })}
         </div>
       </div>
     </main>
