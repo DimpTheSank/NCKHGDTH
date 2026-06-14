@@ -2,44 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'
-import * as XLSX from 'xlsx'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getCookie } from '@/lib/cookies'
-
-function shuffle(array) {
-  const arr = [...array]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
-
-function toExportXlsxUrl(driveLink) {
-  const match = driveLink.match(/\/d\/([a-zA-Z0-9_-]+)/)
-  const fileId = match ? match[1] : null
-  if (!fileId) return driveLink
-  return `https://docs.google.com/spreadsheets/d/${fileId}/export?format=xlsx`
-}
 
 export default function Page() {
   const router = useRouter()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  const [taiKhoan, setTaiKhoan] = useState(null)
-  const [currentLevel, setCurrentLevel] = useState(1)
-  const [targetLevel, setTargetLevel] = useState(1)
-
-  const [questions, setQuestions] = useState([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-
-  const [selectedIndex, setSelectedIndex] = useState(null)
-  const [feedback, setFeedback] = useState(null) // 'correct' | 'wrong' | null
-  const [showComplete, setShowComplete] = useState(false)
-  const [showLocked, setShowLocked] = useState(false)
+  const [levels, setLevels] = useState([]) // [{ level, score, unlocked }]
 
   useEffect(() => {
     const init = async () => {
@@ -48,10 +20,8 @@ export default function Page() {
         router.push('/')
         return
       }
-      setTaiKhoan(account)
 
       try {
-        // 1. Lấy thông tin user
         const userRef = doc(db, 'users', account)
         const userSnap = await getDoc(userRef)
         if (!userSnap.exists()) {
@@ -59,69 +29,26 @@ export default function Page() {
           return
         }
         const userData = userSnap.data()
-        const manHienTai = Number(userData.manTroChoi1) || 1
         const lop = userData.lop
 
-        // 2. Lấy mục tiêu được giao theo lớp
         const levelsRef = collection(db, 'levels')
         const levelsQuery = query(levelsRef, where('lop', '==', lop))
         const levelsSnap = await getDocs(levelsQuery)
 
-        let manMucTieu = manHienTai
+        let manDuocGiao = 1
         if (!levelsSnap.empty) {
-          const levelData = levelsSnap.docs[0].data()
-          manMucTieu = Number(levelData.manDuocGiaoGame1) || manHienTai
+          manDuocGiao = Number(levelsSnap.docs[0].data().manDuocGiaoGame1) || 1
         }
 
-        setCurrentLevel(manHienTai)
-        setTargetLevel(manMucTieu)
-
-        if (manHienTai >= manMucTieu) {
-          setShowLocked(true)
-          setLoading(false)
-          return
+        const builtLevels = []
+        for (let i = 1; i <= manDuocGiao; i++) {
+          const scoreField = `game1Man${i}`
+          const score = userData[scoreField] ?? null
+          const unlocked = i === 1 || userData[`game1Man${i - 1}`] !== undefined
+          builtLevels.push({ level: i, score, unlocked })
         }
 
-        // 3. Lấy link dữ liệu câu hỏi
-        const gameRef = doc(db, 'games', 'game1')
-        const gameSnap = await getDoc(gameRef)
-        if (!gameSnap.exists() || !gameSnap.data().dataLink) {
-          setError('Không tìm thấy dữ liệu trò chơi')
-          setLoading(false)
-          return
-        }
-
-        const xlsxUrl = toExportXlsxUrl(gameSnap.data().dataLink)
-
-        // 4. Tải và đọc file Excel
-        const res = await fetch(xlsxUrl)
-        const arrayBuffer = await res.arrayBuffer()
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-        const sheet = workbook.Sheets[workbook.SheetNames[0]]
-        const rows = XLSX.utils.sheet_to_json(sheet)
-
-        const levelRows = rows.filter((row) => Number(row.level) === manHienTai)
-
-        if (levelRows.length === 0) {
-          setError('Không tìm thấy câu hỏi cho màn này')
-          setLoading(false)
-          return
-        }
-
-        const builtQuestions = shuffle(levelRows).map((row) => {
-          const options = shuffle([
-            { text: String(row.vn).trim(), correct: true },
-            { text: String(row.d1).trim(), correct: false },
-            { text: String(row.d2).trim(), correct: false },
-            { text: String(row.d3).trim(), correct: false },
-          ])
-          return {
-            cn: String(row.cn).trim(),
-            options,
-          }
-        })
-
-        setQuestions(builtQuestions)
+        setLevels(builtLevels)
         setLoading(false)
       } catch (err) {
         console.error(err)
@@ -133,67 +60,10 @@ export default function Page() {
     init()
   }, [router])
 
-  const currentQuestion = questions[currentIndex]
-
-  const handleSelect = (index) => {
-    if (selectedIndex !== null) return
-
-    setSelectedIndex(index)
-    const isCorrect = currentQuestion.options[index].correct
-    setFeedback(isCorrect ? 'correct' : 'wrong')
-
-    setTimeout(() => {
-      setSelectedIndex(null)
-      setFeedback(null)
-
-      if (currentIndex + 1 < questions.length) {
-        setCurrentIndex((prev) => prev + 1)
-      } else {
-        finishLevel()
-      }
-    }, 1200)
-  }
-
-  const finishLevel = async () => {
-    try {
-      const newLevel = currentLevel + 1
-      const userRef = doc(db, 'users', taiKhoan)
-      await setDoc(userRef, { manTroChoi1: String(newLevel) }, { merge: true })
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setShowComplete(true)
-    }
-  }
-
-  const handleConfirmComplete = () => {
-    router.push('/trang-chu')
-  }
-
   if (loading) {
     return (
       <main className="min-h-screen bg-[#f6f7fb] flex items-center justify-center">
         <p className="text-sm font-semibold text-slate-500">Đang tải...</p>
-      </main>
-    )
-  }
-
-  if (showLocked) {
-    return (
-      <main className="min-h-screen bg-[#f6f7fb] flex items-center justify-center px-4">
-        <div className="card p-8 max-w-sm w-full text-center">
-          <div className="text-5xl mb-3">🎉</div>
-          <h2 className="text-xl font-extrabold text-slate-900 mb-2">Bạn đã hoàn thành mục tiêu!</h2>
-          <p className="text-sm text-slate-500 mb-6">
-            Bạn đã hoàn thành các màn được giao. Hãy chờ giáo viên giao thêm nhiệm vụ mới nhé.
-          </p>
-          <button
-            onClick={() => router.push('/trang-chu')}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-colors"
-          >
-            Về trang chủ
-          </button>
-        </div>
       </main>
     )
   }
@@ -214,94 +84,46 @@ export default function Page() {
     )
   }
 
-  if (!currentQuestion) return null
-
   return (
-    <main className="min-h-screen bg-[#f6f7fb] flex flex-col items-center px-4 py-8">
-      <div className="w-full max-w-2xl">
+    <main className="min-h-screen bg-[#f6f7fb] px-4 py-8">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-lg font-extrabold text-slate-900">Trò chơi 1 - Màn {currentLevel}</h1>
-          <span className="text-sm font-bold text-orange-600">
-            Câu {currentIndex + 1}/{questions.length}
-          </span>
-        </div>
-
-        <div className="card p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-            <div className="flex-1 rounded-xl border-2 border-orange-200 bg-orange-50 p-4 flex items-center justify-center text-center">
-              <p className="text-base font-extrabold text-slate-900">{currentQuestion.cn}</p>
-            </div>
-            <div className="flex-1 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 flex items-center justify-center text-center">
-              <p className="text-base font-bold text-slate-300">...........................</p>
-            </div>
-          </div>
-        </div>
-
-        {feedback && (
-          <p
-            className={`text-center font-extrabold mb-4 ${
-              feedback === 'correct' ? 'text-green-soft' : 'text-red-soft'
-            }`}
+          <h1 className="text-2xl font-extrabold text-slate-900">Trò chơi 1</h1>
+          <button
+            onClick={() => router.push('/trang-chu')}
+            className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
           >
-            {feedback === 'correct' ? 'Chính xác!' : 'Chưa đúng rồi!'}
-          </p>
-        )}
+            Về trang chủ
+          </button>
+        </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          {currentQuestion.options.map((option, index) => {
-            let extraClass = 'border-gray-200 bg-white hover:border-orange-300'
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {levels.map((item) => (
+            <div
+              key={item.level}
+              className={`card p-5 flex flex-col justify-between ${!item.unlocked ? 'opacity-60' : ''}`}
+            >
+              <div>
+                <p className="text-lg font-extrabold text-slate-900">Màn {item.level}</p>
+                <p className="mt-2 text-sm font-semibold text-slate-600">
+                  Điểm cao nhất:{' '}
+                  {item.score !== null && item.score !== undefined
+                    ? `${item.score}/5`
+                    : 'Chưa chơi'}
+                </p>
+              </div>
 
-            if (selectedIndex === index) {
-              extraClass =
-                feedback === 'correct'
-                  ? 'border-green-soft bg-green-light shake'
-                  : 'border-red-soft bg-red-light shake'
-            }
-
-            return (
               <button
-                key={index}
-                onClick={() => handleSelect(index)}
-                disabled={selectedIndex !== null}
-                className={`rounded-xl border-2 p-4 text-sm font-semibold text-slate-700 text-left transition disabled:cursor-not-allowed ${extraClass}`}
+                onClick={() => router.push(`/tro-choi-1/${item.level}`)}
+                disabled={!item.unlocked}
+                className="mt-4 rounded-md bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                {option.text}
+                {item.unlocked ? 'Chơi' : 'Khóa'}
               </button>
-            )
-          })}
+            </div>
+          ))}
         </div>
       </div>
-
-      {showComplete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-          <div className="card p-8 max-w-sm w-full text-center">
-            <div className="text-5xl mb-3">🏆</div>
-            <h2 className="text-xl font-extrabold text-slate-900 mb-2">
-              Đã hoàn thành Màn {currentLevel}!
-            </h2>
-            <p className="text-sm text-slate-500 mb-6">Tuyệt vời! Bạn đã sẵn sàng cho màn tiếp theo.</p>
-            <button
-              onClick={handleConfirmComplete}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-colors"
-            >
-              Đồng ý
-            </button>
-          </div>
-        </div>
-      )}
-
-      <style jsx global>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-6px); }
-          40% { transform: translateX(6px); }
-          60% { transform: translateX(-4px); }
-          80% { transform: translateX(4px); }
-        }
-        .shake {
-          animation: shake 0.4s ease-in-out;
-        }
-      `}</style>
     </main>
   )
 }
