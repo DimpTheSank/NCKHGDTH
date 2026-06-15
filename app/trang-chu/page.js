@@ -6,10 +6,10 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getCookie, deleteCookie } from '@/lib/cookies'
 
-const games = [
-  { title: 'Trò chơi 1', currentLevel: 'Màn 1', targetLevel: 'Màn 5', href: '/tro-choi-1', color: 'border-orange-200 bg-orange-50' },
-  { title: 'Trò chơi 2', currentLevel: 'Màn 1', targetLevel: 'Màn 5', href: '/tro-choi-2', color: 'border-emerald-200 bg-emerald-50' },
-  { title: 'Trò chơi 3', currentLevel: 'Màn 1', targetLevel: 'Màn 5', href: '/tro-choi-3', color: 'border-sky-200 bg-sky-50' },
+const GAME_CONFIG = [
+  { title: 'Trò chơi 1', manKey: 'manTroChoi1', href: '/tro-choi-1', color: 'border-orange-200 bg-orange-50' },
+  { title: 'Trò chơi 2', manKey: 'manTroChoi2', href: '/tro-choi-2', color: 'border-emerald-200 bg-emerald-50' },
+  { title: 'Trò chơi 3', manKey: 'manTroChoi3', href: '/tro-choi-3', color: 'border-sky-200 bg-sky-50' },
 ]
 
 const sampleLeaderboard = [
@@ -25,6 +25,7 @@ const XP_PER_LEVEL = 1000
 export default function Page() {
   const router = useRouter()
   const [user, setUser] = useState(null)
+  const [mucTieu, setMucTieu] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -46,7 +47,17 @@ export default function Page() {
           return
         }
 
-        setUser(userSnap.data())
+        const userData = userSnap.data()
+        setUser(userData)
+
+        // Fetch mục tiêu từ collection levels theo lop của user
+        if (userData.lop) {
+          const levelRef = doc(db, 'levels', userData.lop)
+          const levelSnap = await getDoc(levelRef)
+          if (levelSnap.exists()) {
+            setMucTieu(levelSnap.data().manDuocGiaoGame1 ?? null)
+          }
+        }
       } catch (err) {
         console.error(err)
         router.push('/')
@@ -119,15 +130,19 @@ export default function Page() {
           </div>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
-            {games.map((game) => (
+            {GAME_CONFIG.map((game) => (
               <div
                 key={game.title}
                 className={`flex min-h-40 flex-col justify-between rounded-lg border p-4 transition hover:-translate-y-0.5 hover:shadow-md ${game.color}`}
               >
                 <div>
                   <p className="text-base font-extrabold text-slate-900">{game.title}</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-600">Màn hiện tại: {game.currentLevel}</p>
-                  <p className="text-sm font-semibold text-slate-600">Mục tiêu: {game.targetLevel}</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">
+                    Màn hiện tại: {user[game.manKey] ?? '—'}
+                  </p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Mục tiêu: {mucTieu ?? '—'}
+                  </p>
                 </div>
                 <button
                   onClick={() => router.push(game.href)}
