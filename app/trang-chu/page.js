@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getCookie, deleteCookie } from '@/lib/cookies'
 
-const GAME_CONFIG = [
-  { title: 'Trò chơi 1', manKey: 'manTroChoi1', href: '/tro-choi-1', color: 'border-orange-200 bg-orange-50' },
-  { title: 'Trò chơi 2', manKey: 'manTroChoi2', href: '/tro-choi-2', color: 'border-emerald-200 bg-emerald-50' },
-  { title: 'Trò chơi 3', manKey: 'manTroChoi3', href: '/tro-choi-3', color: 'border-sky-200 bg-sky-50' },
+const gameMeta = [
+  { title: 'Trò chơi 1', key: 'game1', href: '/tro-choi-1', color: 'border-orange-200 bg-orange-50' },
+  { title: 'Trò chơi 2', key: 'game2', href: '/tro-choi-2', color: 'border-emerald-200 bg-emerald-50' },
+  { title: 'Trò chơi 3', key: 'game3', href: '/tro-choi-3', color: 'border-sky-200 bg-sky-50' },
 ]
 
 const sampleLeaderboard = [
@@ -21,11 +21,12 @@ const sampleLeaderboard = [
 ]
 
 const XP_PER_LEVEL = 1000
+const MAX_LEVEL = 5
 
 export default function Page() {
   const router = useRouter()
   const [user, setUser] = useState(null)
-  const [mucTieu, setMucTieu] = useState(null)
+  const [games, setGames] = useState(gameMeta.map((g) => ({ ...g, currentLevel: 'Màn 1', targetLevel: 'Màn 5' })))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function Page() {
       return
     }
 
-    const fetchUser = async () => {
+    const fetchData = async () => {
       try {
         const userRef = doc(db, 'users', taiKhoan)
         const userSnap = await getDoc(userRef)
@@ -50,14 +51,38 @@ export default function Page() {
         const userData = userSnap.data()
         setUser(userData)
 
-        // Fetch mục tiêu từ collection levels theo lop của user
-        if (userData.lop) {
-          const levelRef = doc(db, 'levels', userData.lop)
-          const levelSnap = await getDoc(levelRef)
-          if (levelSnap.exists()) {
-            setMucTieu(levelSnap.data().manDuocGiaoGame1 ?? null)
-          }
+        const lop = userData.lop
+
+        const levelsRef = collection(db, 'levels')
+        const levelsQuery = query(levelsRef, where('lop', '==', lop))
+        const levelsSnap = await getDocs(levelsQuery)
+
+        let levelsData = {}
+        if (!levelsSnap.empty) {
+          levelsData = levelsSnap.docs[0].data()
         }
+
+        const updatedGames = gameMeta.map((game) => {
+          const targetField = `manDuocGiao${game.key.charAt(0).toUpperCase() + game.key.slice(1)}`
+          const target = Number(levelsData[targetField]) || 1
+
+          // Tìm màn hiện tại: màn cao nhất đã có điểm + 1 (nếu chưa đạt giới hạn), hoặc 1 nếu chưa chơi
+          let current = 1
+          for (let i = 1; i <= MAX_LEVEL; i++) {
+            const scoreField = `${game.key}Man${i}`
+            if (userData[scoreField] !== undefined) {
+              current = Math.min(i + 1, MAX_LEVEL)
+            }
+          }
+
+          return {
+            ...game,
+            currentLevel: `Màn ${current}`,
+            targetLevel: `Màn ${target}`,
+          }
+        })
+
+        setGames(updatedGames)
       } catch (err) {
         console.error(err)
         router.push('/')
@@ -66,7 +91,7 @@ export default function Page() {
       }
     }
 
-    fetchUser()
+    fetchData()
   }, [router])
 
   const handleLogout = () => {
@@ -130,19 +155,15 @@ export default function Page() {
           </div>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
-            {GAME_CONFIG.map((game) => (
+            {games.map((game) => (
               <div
                 key={game.title}
                 className={`flex min-h-40 flex-col justify-between rounded-lg border p-4 transition hover:-translate-y-0.5 hover:shadow-md ${game.color}`}
               >
                 <div>
                   <p className="text-base font-extrabold text-slate-900">{game.title}</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-600">
-                    Màn hiện tại: {user[game.manKey] ?? '—'}
-                  </p>
-                  <p className="text-sm font-semibold text-slate-600">
-                    Mục tiêu: {mucTieu ?? '—'}
-                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">Màn hiện tại: {game.currentLevel}</p>
+                  <p className="text-sm font-semibold text-slate-600">Mục tiêu: {game.targetLevel}</p>
                 </div>
                 <button
                   onClick={() => router.push(game.href)}
