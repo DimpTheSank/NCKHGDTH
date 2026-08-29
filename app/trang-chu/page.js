@@ -1,199 +1,257 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { getCookie, deleteCookie } from '@/lib/cookies'
+import { deleteCookie, getCookie } from '@/lib/cookies'
+import AssignmentCard from '@/components/student/AssignmentCard'
+import StudentShell from '@/components/student/StudentShell'
+import { studentDashboardMock } from '@/data/mock/studentDashboard'
 
-const gameMeta = [
-  { title: 'Trò chơi 1', key: 'game1', href: '/tro-choi-1', color: 'border-orange-200 bg-orange-50' },
-  { title: 'Trò chơi 2', key: 'game2', href: '/tro-choi-2', color: 'border-emerald-200 bg-emerald-50' },
-  { title: 'Trò chơi 3', key: 'game3', href: '/tro-choi-3', color: 'border-sky-200 bg-sky-50' },
-]
+function LoadingScreen() {
+  return (
+    <main className="grid min-h-screen place-items-center bg-[#f8f9fd]">
+      <div className="text-center">
+        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-orange-100 border-t-orange-500" />
+        <p className="mt-4 text-sm font-extrabold text-slate-500">Đang chuẩn bị góc học tập...</p>
+      </div>
+    </main>
+  )
+}
 
-const sampleLeaderboard = [
-  { name: 'Trần Thị Bình', points: 1820 },
-  { name: 'Lê Hoàng Nam', points: 1640 },
-  { name: 'Phạm Minh Khuê', points: 1490 },
-  { name: 'Nguyễn Văn An', points: 1250 },
-  { name: 'Đỗ Gia Hân', points: 1100 },
-]
-
-const XP_PER_LEVEL = 1000
-const MAX_LEVEL = 5
+function StatCard({ icon, label, value, helper, tone }) {
+  return (
+    <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.04)]">
+      <div className="flex items-center gap-3">
+        <span className={`grid h-11 w-11 place-items-center rounded-2xl text-xl ${tone}`}>{icon}</span>
+        <div>
+          <p className="text-xs font-extrabold text-slate-400">{label}</p>
+          <p className="mt-0.5 text-xl font-black text-slate-900">{value}</p>
+        </div>
+      </div>
+      <p className="mt-3 text-xs font-bold text-slate-400">{helper}</p>
+    </div>
+  )
+}
 
 export default function Page() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
-  const [games, setGames] = useState(gameMeta.map((g) => ({ ...g, currentLevel: 'Màn 1', targetLevel: 'Màn 5' })))
   const [loading, setLoading] = useState(true)
+  const [firestoreUser, setFirestoreUser] = useState(null)
 
   useEffect(() => {
-    const taiKhoan = getCookie('taiKhoan')
+    const account = getCookie('taiKhoan')
 
-    if (!taiKhoan) {
+    if (!account) {
       router.push('/')
       return
     }
 
-    const fetchData = async () => {
+    const loadUser = async () => {
       try {
-        const userRef = doc(db, 'users', taiKhoan)
-        const userSnap = await getDoc(userRef)
+        const userSnapshot = await getDoc(doc(db, 'users', account))
 
-        if (!userSnap.exists()) {
+        if (!userSnapshot.exists()) {
           deleteCookie('taiKhoan')
           router.push('/')
           return
         }
 
-        const userData = userSnap.data()
-        setUser(userData)
-
-        const lop = userData.lop
-
-        const levelsRef = collection(db, 'levels')
-        const levelsQuery = query(levelsRef, where('lop', '==', lop))
-        const levelsSnap = await getDocs(levelsQuery)
-
-        let levelsData = {}
-        if (!levelsSnap.empty) {
-          levelsData = levelsSnap.docs[0].data()
-        }
-
-        const updatedGames = gameMeta.map((game) => {
-          const targetField = `manDuocGiao${game.key.charAt(0).toUpperCase() + game.key.slice(1)}`
-          const target = Number(levelsData[targetField]) || 1
-
-          // Tìm màn hiện tại: màn cao nhất đã có điểm + 1 (nếu chưa đạt giới hạn), hoặc 1 nếu chưa chơi
-          let current = 1
-          for (let i = 1; i <= MAX_LEVEL; i++) {
-            const scoreField = `${game.key}Man${i}`
-            if (userData[scoreField] !== undefined) {
-              current = Math.min(i + 1, MAX_LEVEL)
-            }
-          }
-
-          return {
-            ...game,
-            currentLevel: `Màn ${current}`,
-            targetLevel: `Màn ${target}`,
-          }
-        })
-
-        setGames(updatedGames)
-      } catch (err) {
-        console.error(err)
-        router.push('/')
+        setFirestoreUser(userSnapshot.data())
+      } catch (error) {
+        console.error(error)
+        setFirestoreUser(null)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchData()
+    loadUser()
   }, [router])
+
+  const user = useMemo(() => {
+    const fullName = firestoreUser
+      ? [firestoreUser.ho, firestoreUser.ten].filter(Boolean).join(' ')
+      : studentDashboardMock.user.name
+
+    const initials = fullName
+      .split(' ')
+      .slice(-2)
+      .map((part) => part.charAt(0))
+      .join('')
+      .toUpperCase()
+
+    return {
+      ...studentDashboardMock.user,
+      name: fullName || studentDashboardMock.user.name,
+      initials: initials || studentDashboardMock.user.initials,
+      className: firestoreUser?.lop || studentDashboardMock.user.className,
+      level: Number(firestoreUser?.cap) || studentDashboardMock.user.level,
+      xp: Number(firestoreUser?.kinhNghiem) || studentDashboardMock.user.xp,
+    }
+  }, [firestoreUser])
 
   const handleLogout = () => {
     deleteCookie('taiKhoan')
     router.push('/')
   }
 
-  if (loading || !user) {
-    return (
-      <main className="min-h-screen bg-[#f6f7fb] flex items-center justify-center">
-        <p className="text-sm font-semibold text-slate-500">Đang tải...</p>
-      </main>
-    )
-  }
+  if (loading) return <LoadingScreen />
 
-  const cap = Number(user.cap) || 1
-  const kinhNghiem = Number(user.kinhNghiem) || 0
-  const progress = Math.min(100, Math.round((kinhNghiem / XP_PER_LEVEL) * 100))
+  const { weeklyProgress, continueLearning, assignments, leaderboard } = studentDashboardMock
+  const xpProgress = Math.min(100, Math.round((user.xp / user.nextLevelXp) * 100))
+  const weeklyPercent = Math.round((weeklyProgress.completed / weeklyProgress.total) * 100)
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb]">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-5 py-4">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-orange-600">EduGame</p>
-            <h1 className="text-2xl font-extrabold text-slate-900">
-              {user.vaiTro}: {user.ho} {user.ten}
-            </h1>
-            <p className="text-sm font-semibold text-slate-500">Lớp {user.lop}</p>
-          </div>
+    <StudentShell user={user} activePath="/trang-chu" onLogout={handleLogout}>
+      <section className="mb-6 lg:hidden">
+        <p className="text-sm font-bold text-slate-400">Chào buổi sáng,</p>
+        <h1 className="mt-1 text-2xl font-black text-slate-900">{user.name}! 👋</h1>
+      </section>
 
-          <div className="flex-1 min-w-[200px] max-w-sm">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-extrabold text-slate-700">Cấp {cap}</span>
-              <span className="text-xs font-semibold text-slate-500">{kinhNghiem}/{XP_PER_LEVEL} KN</span>
-            </div>
-            <div className="progress-bar-track">
-              <div className="progress-bar-fill bg-orange-500" style={{ width: `${progress}%` }} />
-            </div>
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-orange-500 via-orange-500 to-amber-400 p-6 text-white shadow-[0_18px_45px_rgba(249,115,22,0.24)] sm:p-8">
+        <div className="absolute -right-12 -top-16 h-52 w-52 rounded-full border-[34px] border-white/10" />
+        <div className="absolute bottom-5 right-8 hidden h-24 w-24 rotate-12 rounded-[2rem] bg-white/10 sm:block" />
+
+        <div className="relative max-w-2xl">
+          <span className="inline-flex rounded-full bg-white/20 px-3 py-1.5 text-xs font-extrabold backdrop-blur">
+            Bài cần làm tiếp
+          </span>
+          <h1 className="mt-5 text-2xl font-black sm:text-3xl">{continueLearning.title}</h1>
+          <p className="mt-2 font-bold text-orange-50">{continueLearning.subtitle}</p>
+
+          <div className="mt-5 flex flex-wrap gap-3 text-sm font-extrabold">
+            <span className="rounded-xl bg-white/15 px-3 py-2">◷ Còn {continueLearning.remaining} màn</span>
+            <span className="rounded-xl bg-white/15 px-3 py-2">⌁ Hạn {continueLearning.deadline.toLowerCase()}</span>
           </div>
 
           <button
-            onClick={handleLogout}
-            className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
+            type="button"
+            onClick={() => router.push(continueLearning.href)}
+            className="mt-6 min-h-12 rounded-2xl bg-white px-6 text-sm font-black text-orange-600 shadow-lg transition hover:-translate-y-0.5 hover:bg-orange-50"
           >
-            Đăng xuất
+            Tiếp tục học →
           </button>
         </div>
-      </header>
+      </section>
 
-      <div className="mx-auto grid max-w-6xl gap-6 px-5 py-6 lg:grid-cols-[1fr_340px]">
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+      <section className="mt-6 grid gap-4 sm:grid-cols-3" aria-label="Tiến độ học tập">
+        <StatCard
+          icon="✓"
+          label="Bài tuần này"
+          value={`${weeklyProgress.completed}/${weeklyProgress.total}`}
+          helper={`Đã hoàn thành ${weeklyPercent}%`}
+          tone="bg-emerald-50 text-emerald-600"
+        />
+        <StatCard
+          icon="⚡"
+          label="Điểm kinh nghiệm"
+          value={`${user.xp} XP`}
+          helper={`${user.nextLevelXp - user.xp} XP nữa để lên cấp`}
+          tone="bg-violet-50 text-violet-600"
+        />
+        <StatCard
+          icon="🔥"
+          label="Chuỗi ngày học"
+          value={`${user.streak} ngày`}
+          helper="Cố gắng giữ vững nhé!"
+          tone="bg-amber-50 text-amber-600"
+        />
+      </section>
+
+      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section>
+          <div className="mb-4 flex items-end justify-between gap-4">
             <div>
-              <h2 className="text-xl font-extrabold text-slate-900">Nhiệm vụ hôm nay</h2>
-              <p className="mt-1 text-sm text-slate-500">Chọn một trò chơi để tiếp tục học.</p>
+              <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-orange-500">
+                Nhiệm vụ của em
+              </p>
+              <h2 className="mt-1 text-2xl font-black text-slate-900">Bài tập được giao</h2>
             </div>
-            <div className="rounded-md bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
-              Đang hoạt động
-            </div>
+            <button
+              type="button"
+              className="text-sm font-extrabold text-orange-600 hover:text-orange-700"
+            >
+              Xem tất cả →
+            </button>
           </div>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
-            {games.map((game) => (
-              <div
-                key={game.title}
-                className={`flex min-h-40 flex-col justify-between rounded-lg border p-4 transition hover:-translate-y-0.5 hover:shadow-md ${game.color}`}
-              >
-                <div>
-                  <p className="text-base font-extrabold text-slate-900">{game.title}</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-600">Màn hiện tại: {game.currentLevel}</p>
-                  <p className="text-sm font-semibold text-slate-600">Mục tiêu: {game.targetLevel}</p>
-                </div>
-                <button
-                  onClick={() => router.push(game.href)}
-                  className="mt-4 rounded-md bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600"
-                >
-                  Chơi ngay
-                </button>
-              </div>
+          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            {assignments.map((assignment) => (
+              <AssignmentCard key={assignment.id} assignment={assignment} />
             ))}
           </div>
         </section>
 
-        <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-extrabold text-slate-900">Bảng xếp hạng</h2>
-          <p className="mt-1 text-sm text-slate-500">Top học sinh tích cực (ví dụ)</p>
-          <ul className="mt-4 space-y-3">
-            {sampleLeaderboard.map((item, index) => (
-              <li key={item.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
-                    {index + 1}
+        <aside className="space-y-5">
+          <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-violet-500">
+                  Hành trình
+                </p>
+                <h2 className="mt-1 text-lg font-black text-slate-900">Cấp {user.level}</h2>
+              </div>
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-violet-50 text-2xl">🚀</span>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between text-xs font-extrabold">
+              <span className="text-slate-500">{user.xp} XP</span>
+              <span className="text-slate-400">{user.nextLevelXp} XP</span>
+            </div>
+            <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400"
+                style={{ width: `${xpProgress}%` }}
+              />
+            </div>
+            <p className="mt-3 text-xs font-bold leading-5 text-slate-400">
+              Em đang tiến rất gần tới cấp tiếp theo!
+            </p>
+          </section>
+
+          <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-amber-500">
+                  Thi đua vui
+                </p>
+                <h2 className="mt-1 text-lg font-black text-slate-900">Top lớp tuần này</h2>
+              </div>
+              <span className="text-2xl">🏆</span>
+            </div>
+
+            <ol className="mt-5 space-y-3">
+              {leaderboard.map((student) => (
+                <li
+                  key={student.rank}
+                  className={`flex items-center gap-3 rounded-2xl p-2.5 ${
+                    student.isCurrent ? 'bg-orange-50 ring-1 ring-orange-100' : ''
+                  }`}
+                >
+                  <span className="w-5 text-center text-sm font-black text-slate-400">{student.rank}</span>
+                  <span className={`grid h-9 w-9 place-items-center rounded-xl text-xs font-black ${student.color}`}>
+                    {student.initials}
                   </span>
-                  <span className="text-sm font-semibold text-slate-700">{item.name}</span>
-                </div>
-                <span className="text-sm font-bold text-orange-600">{item.points.toLocaleString('vi-VN')}</span>
-              </li>
-            ))}
-          </ul>
+                  <span className="min-w-0 flex-1 truncate text-sm font-extrabold text-slate-700">
+                    {student.name}
+                    {student.isCurrent && <span className="ml-1 text-xs text-orange-500">(Em)</span>}
+                  </span>
+                  <span className="text-xs font-black text-slate-500">{student.xp} XP</span>
+                </li>
+              ))}
+            </ol>
+
+            <button
+              type="button"
+              className="mt-4 w-full rounded-2xl bg-slate-50 py-3 text-sm font-extrabold text-slate-600 transition hover:bg-slate-100"
+            >
+              Xem bảng xếp hạng
+            </button>
+          </section>
         </aside>
       </div>
-    </main>
+    </StudentShell>
   )
 }
