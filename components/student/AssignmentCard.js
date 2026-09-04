@@ -16,6 +16,16 @@ const statusStyles = {
     badge: 'bg-emerald-50 text-emerald-700',
     bar: 'bg-emerald-500',
   },
+  urgent: {
+    label: 'Sắp hết hạn',
+    badge: 'bg-rose-50 text-rose-700',
+    bar: 'bg-rose-500',
+  },
+  retry: {
+    label: 'Cần làm lại',
+    badge: 'bg-violet-50 text-violet-700',
+    bar: 'bg-violet-500',
+  },
 }
 
 export default function AssignmentCard({ assignment }) {
@@ -62,10 +72,12 @@ export default function AssignmentCard({ assignment }) {
               : 'bg-orange-500 text-white shadow-[0_8px_18px_rgba(249,115,22,0.22)] hover:bg-orange-600'
           }`}
         >
-          {assignment.status === 'active'
+          {assignment.status === 'active' || assignment.status === 'urgent'
             ? 'Tiếp tục học'
             : assignment.status === 'done'
               ? 'Xem kết quả'
+              : assignment.status === 'retry'
+                ? 'Làm lại'
               : 'Bắt đầu'}
         </Link>
       </div>

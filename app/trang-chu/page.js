@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { deleteCookie, getCookie } from '@/lib/cookies'
@@ -169,12 +170,12 @@ export default function Page() {
               </p>
               <h2 className="mt-1 text-2xl font-black text-slate-900">Bài tập được giao</h2>
             </div>
-            <button
-              type="button"
+            <Link
+              href="/bai-tap"
               className="text-sm font-extrabold text-orange-600 hover:text-orange-700"
             >
               Xem tất cả →
-            </button>
+            </Link>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
