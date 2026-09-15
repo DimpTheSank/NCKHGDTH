@@ -1,4 +1,4 @@
-:root {
+.page {
   --green-950: #153d2d;
   --green-800: #245d3d;
   --green-600: #398653;
@@ -347,5 +347,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .page, .page *, .page *::before, .page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
