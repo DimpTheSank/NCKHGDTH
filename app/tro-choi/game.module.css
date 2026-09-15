@@ -349,3 +349,161 @@
 @media (prefers-reduced-motion: reduce) {
   .page, .page *, .page *::before, .page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* Level and stage navigation */
+.subHeader {
+  display: grid;
+  grid-template-columns: 150px minmax(260px, 1fr) 74px;
+  align-items: center;
+  gap: 14px;
+}
+.subHeader .progressPanel { margin: 0; }
+.homeButton {
+  min-height: 48px; border: 0; border-radius: 14px; padding: 0 15px; display: flex; align-items: center;
+  justify-content: center; gap: 8px; color: var(--ink); background: white; font-weight: 800; cursor: pointer;
+  box-shadow: 0 8px 22px rgba(42,94,76,.08);
+}
+.homeButton span { font-size: 24px; color: var(--green-600); }
+.avatarButton {
+  width: 60px; height: 60px; border: 4px solid white; border-radius: 50%; display: grid; place-items: center;
+  position: relative; color: white; background: linear-gradient(145deg,#65a487,#2e7450); font-size: 12px; font-weight: 900;
+}
+.avatarButton span {
+  width: 80px; position: absolute; top: 64px; right: -10px; color: #60756d; font-size: 8px; font-weight: 700;
+}
+
+.sectionHeading, .stageHeading {
+  min-height: 82px; margin: 14px 0; padding: 12px 17px; border-radius: 19px; display: grid;
+  grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; background: rgba(255,255,255,.82);
+}
+.sectionHeading > button, .stageHeading > button {
+  min-height: 42px; border: 0; border-radius: 12px; padding: 0 13px; color: var(--green-800);
+  background: #e2f1e6; font-size: 14px; font-weight: 850; cursor: pointer;
+}
+.sectionHeading > div, .stageHeading > div { display: flex; align-items: center; gap: 11px; }
+.sectionHeading > div > span, .stageHeading > div > span { font-size: 36px; }
+.sectionHeading small { color: #83968e; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.sectionHeading h1 { margin: 2px 0 0; font-size: clamp(17px,2.4vw,27px); }
+.sectionHeading > strong, .stageHeading > span {
+  padding: 9px 12px; border-radius: 12px; color: #7e5a08; background: #fff2c9; font-size: 12px;
+}
+
+.levelsArea {
+  min-height: calc(100dvh - 190px); padding: clamp(18px,3vw,38px); border-radius: 24px;
+  background: linear-gradient(160deg,#d7f0e7,#c5e7ec);
+}
+.levelCards { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: clamp(10px,1.5vw,18px); }
+.levelCard {
+  min-width: 0; min-height: 390px; padding: 0 0 15px; border: 4px solid rgba(255,255,255,.85); border-radius: 23px;
+  position: relative; overflow: hidden; color: var(--ink); background: #f9fff9; box-shadow: 0 13px 28px rgba(41,89,71,.14);
+  cursor: pointer; transition: transform .2s ease, box-shadow .2s ease;
+}
+.levelCard:hover:not(:disabled) { transform: translateY(-5px); box-shadow: 0 19px 34px rgba(41,89,71,.22); }
+.currentLevel { outline: 3px solid #a34ff1; outline-offset: 2px; }
+.levelNumber {
+  display: block; margin: 13px; padding: 9px 4px; border-radius: 999px; color: #db6b43; background: #ffe49c;
+  font-size: 12px; font-weight: 900; letter-spacing: .05em;
+}
+.levelLandscape {
+  height: 225px; margin: 0 10px; border-radius: 15px; position: relative; overflow: hidden;
+  display: grid; place-items: center; background: linear-gradient(#bce4ee 0 35%,#91ca8b 36% 67%,#d9b488 68%);
+}
+.levelLandscape::after {
+  content: ""; width: 55%; height: 100%; position: absolute; top: 45%; left: 22%; background: #d8b28b;
+  transform: perspective(110px) rotateX(18deg); clip-path: polygon(32% 0,68% 0,100% 100%,0 100%);
+}
+.levelLandscape > span { position: relative; z-index: 2; font-size: 64px; filter: drop-shadow(0 9px 7px rgba(41,70,52,.18)); }
+.levelLandscape i { width: 34px; height: 60px; border-radius: 50% 50% 30% 30%; position: absolute; z-index: 1; background: #4f985d; }
+.levelLandscape i:nth-of-type(1) { left: 7%; top: 26%; } .levelLandscape i:nth-of-type(2) { right: 7%; top: 22%; }
+.levelLandscape i:nth-of-type(3) { right: 26%; top: 34%; }
+.levelState { display: flex; justify-content: center; align-items: center; gap: 9px; margin-top: -17px; position: relative; z-index: 3; }
+.levelState b { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: white; box-shadow: 0 5px 15px rgba(40,70,56,.16); }
+.levelState span { padding: 7px 9px; border-radius: 10px; color: #7d5a00; background: #fff1c7; font-size: 11px; font-weight: 900; }
+.levelCard > small { display: block; margin-top: 12px; color: #708279; font-weight: 750; }
+.levelLocked { filter: grayscale(.6); cursor: not-allowed; }
+.levelLocked .levelLandscape::before { content: ""; position: absolute; inset: 0; z-index: 4; background: rgba(61,76,69,.4); }
+.levelNote { margin: 25px 0 0; text-align: center; color: #637d73; font-size: 12px; font-weight: 700; }
+
+.stageHeading { min-height: 62px; }
+.stageHeading > div { justify-content: center; }
+.stageHeading > div > span { font-size: 27px; }
+.stageHeading > div strong { font-size: 15px; }
+.restorationLayout {
+  min-height: calc(100dvh - 172px); padding: clamp(12px,2vw,24px); border-radius: 24px;
+  display: grid; grid-template-columns: minmax(0,1.55fr) minmax(230px,.55fr); gap: clamp(14px,2vw,26px);
+  background: linear-gradient(150deg,#cdebed,#bce2df);
+}
+.restorationScene {
+  min-height: 520px; border: 6px solid rgba(255,255,255,.8); border-radius: 22px; position: relative; overflow: hidden;
+  background: linear-gradient(#bce9f6 0 28%,#74b872 29% 65%,#6ba662 66%);
+  box-shadow: inset 0 0 55px rgba(30,75,52,.14);
+}
+.sceneSky { height: 25%; padding: 28px 10%; color: white; font-size: 38px; text-align: justify; }
+.sceneTrees { position: absolute; top: 17%; width: 100%; text-align: center; font-size: clamp(38px,6vw,75px); white-space: nowrap; }
+.scenePath {
+  width: 47%; height: 75%; padding-top: 140px; position: absolute; left: 26.5%; bottom: -5%;
+  display: flex; flex-wrap: wrap; justify-content: space-around; align-content: flex-start; gap: 25px;
+  background: linear-gradient(90deg,#c39270,#dfb08e,#c39270); clip-path: polygon(35% 0,65% 0,100% 100%,0 100%);
+}
+.scenePath span { position: relative; z-index: 2; font-size: clamp(28px,4vw,55px); transition: opacity .2s; }
+.restored { opacity: 1; filter: drop-shadow(0 5px 4px rgba(35,64,45,.25)); }
+.missing { opacity: .14; filter: grayscale(1); }
+.sceneGround { position: absolute; left: 0; right: 0; bottom: 8px; font-size: clamp(25px,4vw,50px); white-space: nowrap; }
+.restoreCaption {
+  position: absolute; left: 16px; bottom: 15px; z-index: 3; padding: 10px 14px; border-radius: 14px;
+  display: flex; flex-direction: column; color: white; background: rgba(25,70,48,.82);
+}
+.restoreCaption span { font-size: 9px; text-transform: uppercase; letter-spacing: .09em; }
+.restoreCaption strong { margin-top: 3px; font-size: 13px; }
+.stageList { display: flex; flex-direction: column; justify-content: center; gap: 13px; }
+.stageButton {
+  min-height: 76px; padding: 10px 13px; border: 2px solid transparent; border-radius: 16px; display: grid;
+  grid-template-columns: 38px 1fr auto; align-items: center; gap: 9px; color: var(--ink); background: #fff0cc;
+  text-align: left; box-shadow: 0 8px 18px rgba(44,83,68,.08); cursor: pointer;
+}
+.stageButton > span { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.75); }
+.stageButton div { display: flex; flex-direction: column; }
+.stageButton strong { font-size: 12px; } .stageButton small { margin-top: 3px; color: #796c55; font-size: 9px; font-weight: 700; }
+.stageButton > b { color: #9c7100; font-size: 11px; }
+.stageDone { background: #dff2df; }
+.stageCurrent { border-color: var(--coral); background: white; box-shadow: 0 10px 24px rgba(244,119,85,.18); }
+.stageButton:disabled { filter: grayscale(.7); opacity: .65; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .levelCards { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .levelCard { min-height: 350px; }
+  .levelLandscape { height: 195px; }
+}
+@media (max-width: 760px) {
+  .subHeader { grid-template-columns: auto 1fr auto; gap: 7px; }
+  .subHeader .progressPanel { grid-template-columns: 1fr auto; padding: 9px; }
+  .subHeader .progressPanel > span { display: none; }
+  .homeButton { min-width: 44px; width: 44px; padding: 0; font-size: 0; }
+  .homeButton span { font-size: 24px; }
+  .avatarButton { width: 46px; height: 46px; border-width: 2px; }
+  .avatarButton span { display: none; }
+  .sectionHeading { grid-template-columns: auto 1fr; }
+  .sectionHeading > strong { grid-column: 2; width: max-content; margin-top: -8px; }
+  .levelsArea { padding: 11px; }
+  .levelCards { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+  .levelCard { min-height: 310px; border-width: 3px; }
+  .levelLandscape { height: 160px; }
+  .levelLandscape > span { font-size: 52px; }
+  .stageHeading { grid-template-columns: auto 1fr; }
+  .stageHeading > span { display: none; }
+  .stageHeading > button { font-size: 0; width: 42px; padding: 0; }
+  .stageHeading > button::first-letter { font-size: 18px; }
+  .restorationLayout { grid-template-columns: 1fr; min-height: auto; padding: 10px; }
+  .restorationScene { min-height: 390px; }
+  .scenePath { padding-top: 105px; }
+  .stageList { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+  .stageButton { grid-template-columns: 32px 1fr; }
+  .stageButton > b { display: none; }
+}
+@media (max-width: 390px) {
+  .levelCards { grid-template-columns: 1fr; }
+  .levelCard { min-height: 300px; }
+  .levelLandscape { height: 170px; }
+  .stageList { grid-template-columns: 1fr; }
+}
