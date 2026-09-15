@@ -12,23 +12,59 @@ const places = [
 
 const levelProgress = [5, 2, 0, 0, 0];
 
-function ProgressBar() {
-  return (
-    <div className={styles.progressPanel}>
-      <span>Tiến độ chung</span>
-      <div className={styles.progressTrack}><div className={styles.progressValue} /></div>
-      <strong>90/180</strong>
-    </div>
-  );
-}
-
 function GameHeader({ onHome, compact = false }) {
   return (
     <header className={`${styles.subHeader} ${compact ? styles.compactHeader : ""}`}>
       <button className={styles.homeButton} onClick={onHome}><span>⌂</span> Trang chủ</button>
-      <ProgressBar />
+      <div className={styles.headerBrand}><span>BIỆT ĐỘI</span><strong>KIẾN TẠO SÀI GÒN</strong></div>
       <button className={styles.avatarButton} aria-label="Mở hồ sơ">HN<span>Hình nhân vật</span></button>
     </header>
+  );
+}
+
+function TaoDanScene({ restoredCount }) {
+  const state = (step) => restoredCount >= step ? styles.objectRestored : styles.objectRuined;
+
+  return (
+    <div className={styles.taoDanScene} aria-label="Cảnh quan Công viên Tao Đàn">
+      <div className={styles.parkSun} />
+      <div className={styles.parkCloudOne} /><div className={styles.parkCloudTwo} />
+      <div className={styles.distantTrees}>
+        {[0, 1, 2, 3, 4, 5, 6].map((tree) => <i key={tree} />)}
+      </div>
+      <div className={styles.parkLawn} />
+      <div className={styles.parkPath}><i /><i /><i /><i /><i /></div>
+      <div className={styles.treeLeft}><i /><b /><span /></div>
+      <div className={styles.treeRight}><i /><b /><span /></div>
+
+      <div className={`${styles.parkObject} ${styles.fountain} ${state(1)}`}>
+        <div className={styles.waterTop} /><div className={styles.waterJet} /><div className={styles.fountainBowl} /><div className={styles.fountainBase} />
+        <small>Đài phun nước</small>
+      </div>
+      <div className={`${styles.parkObject} ${styles.bench} ${state(2)}`}>
+        <i /><i /><b /><b /><span />
+        <small>Ghế công viên</small>
+      </div>
+      <div className={`${styles.parkObject} ${styles.lamp} ${state(3)}`}>
+        <i /><b /><span /><em />
+        <small>Đèn đường</small>
+      </div>
+      <div className={`${styles.parkObject} ${styles.flowerBed} ${state(4)}`}>
+        <i /><i /><i /><b /><b /><b />
+        <small>Bồn hoa</small>
+      </div>
+      <div className={`${styles.parkObject} ${styles.butterflies} ${state(5)}`}>
+        <i>◆</i><i>◆</i><i>◆</i>
+        <small>Sức sống</small>
+      </div>
+
+      <div className={styles.parkForeground}>
+        <i /><i /><i /><i /><i /><i /><i />
+      </div>
+      <div className={styles.restoreCaption}>
+        <span>Phục hồi cảnh quan</span><strong>{restoredCount}/5 hạng mục</strong>
+      </div>
+    </div>
   );
 }
 
@@ -160,21 +196,22 @@ export default function GamePage() {
             <span>{stageProgress * activePlace.starsPerStage}/{5 * activePlace.starsPerStage} ⭐</span>
           </div>
           <div className={styles.restorationLayout}>
-            <div className={styles.restorationScene}>
-              <div className={styles.sceneSky}>☁️　☁️</div>
-              <div className={styles.sceneTrees}>🌴　🌳　🌴　🌳　🌴</div>
-              <div className={styles.scenePath}>
-                <span className={stageProgress >= 1 ? styles.restored : styles.missing}>⛲</span>
-                <span className={stageProgress >= 2 ? styles.restored : styles.missing}>🪑</span>
-                <span className={stageProgress >= 3 ? styles.restored : styles.missing}>💡</span>
-                <span className={stageProgress >= 4 ? styles.restored : styles.missing}>🌺</span>
-                <span className={stageProgress >= 5 ? styles.restored : styles.missing}>🦋</span>
+            {activePlace.id === "tao-dan" ? (
+              <TaoDanScene restoredCount={stageProgress} />
+            ) : (
+              <div className={styles.restorationScene}>
+                <div className={styles.sceneSky}>☁️　☁️</div>
+                <div className={styles.sceneTrees}>🌴　🌳　🌴　🌳　🌴</div>
+                <div className={styles.scenePath}>
+                  <span className={stageProgress >= 1 ? styles.restored : styles.missing}>⛲</span>
+                  <span className={stageProgress >= 2 ? styles.restored : styles.missing}>🪑</span>
+                  <span className={stageProgress >= 3 ? styles.restored : styles.missing}>💡</span>
+                  <span className={stageProgress >= 4 ? styles.restored : styles.missing}>🌺</span>
+                  <span className={stageProgress >= 5 ? styles.restored : styles.missing}>🦋</span>
+                </div>
+                <div className={styles.sceneGround}>🌿　🌼　🌱　🌷　🌿　🌻　🌱</div>
               </div>
-              <div className={styles.sceneGround}>🌿　🌼　🌱　🌷　🌿　🌻　🌱</div>
-              <div className={styles.restoreCaption}>
-                <span>Tiến độ phục hồi</span><strong>{stageProgress}/5 biểu tượng</strong>
-              </div>
-            </div>
+            )}
             <div className={styles.stageList}>
               {[1, 2, 3, 4, 5].map((stage) => {
                 const completed = stage <= stageProgress;
@@ -206,7 +243,6 @@ export default function GamePage() {
             <button aria-label={soundOn ? "Tắt âm thanh" : "Bật âm thanh"} onClick={() => setSoundOn(!soundOn)}>{soundOn ? "🔊" : "🔇"}</button>
           </nav>
         </header>
-        <ProgressBar />
         <div className={styles.mapArea}>
           <div className={styles.mapGrid}>
             {places.map((place) => (
