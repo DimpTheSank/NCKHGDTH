@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && profile) router.replace("/");
+    if (!loading && user && profile) router.replace(profile.role === "teacher" ? "/giao-vien" : "/");
   }, [loading, profile, router, user]);
 
   async function handleSubmit(event) {
