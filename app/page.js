@@ -166,5 +166,5 @@ function StudentHome() {
 }
 
 export default function HomePage() {
-  return <ProtectedRoute allowedRoles={["student"]}><StudentHome /></ProtectedRoute>;
+  return <ProtectedRoute><StudentHome /></ProtectedRoute>;
 }
