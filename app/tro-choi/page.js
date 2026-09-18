@@ -397,5 +397,5 @@ function GameContent() {
 
 
 export default function GamePage() {
-  return <ProtectedRoute><GameContent /></ProtectedRoute>;
+  return <ProtectedRoute allowedRoles={["student"]}><GameContent /></ProtectedRoute>;
 }
