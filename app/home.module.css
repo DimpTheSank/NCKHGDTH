@@ -3,7 +3,7 @@
   padding: clamp(15px,3vw,36px);
   color: #183f32;
   background: linear-gradient(145deg,#edf8e8,#d9f2e7 50%,#cfe9f1);
-  font-family: Arial,Helvetica,sans-serif;
+  font-family: var(--font-be-vietnam), "Segoe UI", Arial, sans-serif;
 }
 .header {
   width: min(1180px,100%);
