@@ -51,27 +51,29 @@ function GameHeader({ onHome, compact = false }) {
 }
 
 function ZooScene({ restoredCount }) {
+  const currentLayer = restoredCount < 5
+    ? `/game/game2/Cap1_M${restoredCount}.webp`
+    : null;
+
   return (
     <figure className={styles.zooScene}>
       <img
         className={`${styles.zooSceneImage} ${styles.zooBaseImage}`}
-        src="/game/game3/cap1/Cap1_Nen.webp"
+        src="/game/game2/Cap1_Nen.webp"
         alt="Cảnh nền Thảo Cầm Viên"
       />
-      {[1, 2, 3, 4, 5].map((stage) => (
-        stage <= restoredCount && (
-          <img
-            key={stage}
-            className={`${styles.zooSceneImage} ${styles.zooLayerImage}`}
-            src={`/game/game3/cap1/Cap1_M${stage}.webp`}
-            alt=""
-            aria-hidden="true"
-          />
-        )
-      ))}
+      {currentLayer && (
+        <img
+          key={currentLayer}
+          className={`${styles.zooSceneImage} ${styles.zooLayerImage}`}
+          src={currentLayer}
+          alt=""
+          aria-hidden="true"
+        />
+      )}
       <figcaption className={styles.restoreCaption}>
         <span>Phục hồi Thảo Cầm Viên</span>
-        <strong>{restoredCount}/5 hạng mục</strong>
+        <strong>{restoredCount}/5 màn hoàn thành</strong>
       </figcaption>
     </figure>
   );
