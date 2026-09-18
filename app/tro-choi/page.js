@@ -219,9 +219,13 @@ function GameContent() {
     }
 
     setExerciseFeedback("Chính xác! Một phần Thảo Cầm Viên đã được phục hồi.");
+  }
+
+  function finishExercise() {
     if (exerciseStage === zooProgress + 1) {
       setZooProgress((progress) => Math.min(progress + 1, 5));
     }
+    setExerciseStage(null);
   }
 
   if (screen === "intro") {
@@ -383,7 +387,7 @@ function GameContent() {
                 <div className={styles.exerciseActions}>
                   <button className={styles.primaryButton} onClick={submitExercise}>Kiểm tra đáp án</button>
                   {exerciseFeedback.startsWith("Chính xác") && (
-                    <button className={styles.continueButton} onClick={() => setExerciseStage(null)}>
+                    <button className={styles.continueButton} onClick={finishExercise}>
                       Xem cảnh phục hồi →
                     </button>
                   )}
