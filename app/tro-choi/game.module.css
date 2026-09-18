@@ -639,7 +639,56 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  animation: zooReveal .45s ease;
+}
+.zooLayerEnter { animation: zooLayerIn .9s ease both; }
+.zooLayerExit { z-index: 3; animation: zooLayerOut .9s ease both; }
+@keyframes zooLayerIn {
+  0% { opacity: 0; filter: brightness(1.35) saturate(1.15); }
+  45% { opacity: .48; filter: brightness(1.2) saturate(1.1); }
+  100% { opacity: 1; filter: none; }
+}
+@keyframes zooLayerOut {
+  0% { opacity: 1; filter: none; }
+  55% { opacity: .38; filter: brightness(1.35) saturate(.75); }
+  100% { opacity: 0; filter: brightness(1.6) saturate(.5); }
+}
+.zooSceneUpdating::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(circle at center,rgba(255,246,164,.55),transparent 58%);
+  animation: restoreFlash .9s ease both;
+}
+@keyframes restoreFlash {
+  0%,100% { opacity: 0; }
+  38% { opacity: 1; }
+}
+.restoreGlow {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.restoreGlow i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: absolute;
+  background: #fff6a4;
+  box-shadow: 0 0 14px #fff175;
+  animation: restoreSpark .9s ease both;
+}
+.restoreGlow i:nth-child(1) { left: 18%; top: 32%; }
+.restoreGlow i:nth-child(2) { left: 42%; top: 18%; animation-delay: .08s; }
+.restoreGlow i:nth-child(3) { right: 20%; top: 38%; animation-delay: .14s; }
+.restoreGlow i:nth-child(4) { left: 34%; bottom: 22%; animation-delay: .2s; }
+.restoreGlow i:nth-child(5) { right: 32%; bottom: 28%; animation-delay: .26s; }
+@keyframes restoreSpark {
+  0% { opacity: 0; transform: scale(.2) translateY(12px); }
+  45% { opacity: 1; transform: scale(1.25) translateY(-8px); }
+  100% { opacity: 0; transform: scale(.4) translateY(-22px); }
 }
 @keyframes zooReveal {
   from { opacity: .35; transform: scale(1.015); }
