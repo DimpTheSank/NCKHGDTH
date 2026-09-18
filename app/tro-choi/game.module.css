@@ -629,6 +629,16 @@
   min-height: 540px;
   display: block;
   object-fit: cover;
+}
+.zooBaseImage {
+  position: relative;
+  z-index: 1;
+}
+.zooLayerImage {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
   animation: zooReveal .45s ease;
 }
 @keyframes zooReveal {
