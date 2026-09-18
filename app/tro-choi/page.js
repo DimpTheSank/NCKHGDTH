@@ -25,7 +25,7 @@ function shuffleItems(items) {
   return result;
 }
 
-function GameHeaderfunction GameHeader({ onHome, compact = false }) {
+function GameHeader({ onHome, compact = false }) {
   return (
     <header className={`${styles.subHeader} ${compact ? styles.compactHeader : ""}`}>
       <button className={styles.homeButton} onClick={onHome}><span>⌂</span> Trang chủ</button>
@@ -82,7 +82,7 @@ function ZooScene({ restoredCount }) {
   );
 }
 
-function TaoDanScenefunction TaoDanScene({ restoredCount }) {
+function TaoDanScene({ restoredCount }) {
   const state = (step) => restoredCount >= step ? styles.objectRestored : styles.objectRuined;
 
   return (
@@ -335,7 +335,7 @@ function GameContent() {
     }
   }
 
-  if (screen === "intro") {  if (screen === "intro") {
+  if (screen === "intro") {
     return (
       <main className={styles.page}>
         <div className={styles.ambientOne} /><div className={styles.ambientTwo} />
