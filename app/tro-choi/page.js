@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import styles from "./game.module.css";
 
@@ -52,26 +52,51 @@ function GameHeader({ onHome, compact = false }) {
 }
 
 function ZooScene({ restoredCount }) {
-  const currentLayer = restoredCount < 5
-    ? `/game/game2/Cap1_M${restoredCount}.webp`
+  const [visibleCount, setVisibleCount] = useState(restoredCount);
+  const [previousCount, setPreviousCount] = useState(null);
+
+  useEffect(() => {
+    if (restoredCount === visibleCount) return undefined;
+
+    setPreviousCount(visibleCount);
+    setVisibleCount(restoredCount);
+    const timer = window.setTimeout(() => setPreviousCount(null), 900);
+    return () => window.clearTimeout(timer);
+  }, [restoredCount, visibleCount]);
+
+  const layerPath = (count) => count < 5
+    ? `/game/game2/Cap1_M${count}.webp`
     : null;
+  const currentLayer = layerPath(visibleCount);
+  const previousLayer = previousCount === null ? null : layerPath(previousCount);
+  const updating = previousCount !== null;
 
   return (
-    <figure className={styles.zooScene}>
+    <figure className={`${styles.zooScene} ${updating ? styles.zooSceneUpdating : ""}`}>
       <img
         className={`${styles.zooSceneImage} ${styles.zooBaseImage}`}
         src="/game/game2/Cap1_Nen.webp"
         alt="Cảnh nền Thảo Cầm Viên"
       />
+      {previousLayer && (
+        <img
+          key={`old-${previousLayer}`}
+          className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${styles.zooLayerExit}`}
+          src={previousLayer}
+          alt=""
+          aria-hidden="true"
+        />
+      )}
       {currentLayer && (
         <img
-          key={currentLayer}
-          className={`${styles.zooSceneImage} ${styles.zooLayerImage}`}
+          key={`new-${currentLayer}`}
+          className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${updating ? styles.zooLayerEnter : ""}`}
           src={currentLayer}
           alt=""
           aria-hidden="true"
         />
       )}
+      {updating && <div className={styles.restoreGlow} aria-hidden="true"><i /><i /><i /><i /><i /></div>}
       <figcaption className={styles.restoreCaption}>
         <span>Phục hồi Thảo Cầm Viên</span>
         <strong>{restoredCount}/5 màn hoàn thành</strong>
