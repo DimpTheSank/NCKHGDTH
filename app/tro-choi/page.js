@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import styles from "./game.module.css";
 
@@ -54,15 +54,18 @@ function GameHeader({ onHome, compact = false }) {
 function ZooScene({ restoredCount }) {
   const [visibleCount, setVisibleCount] = useState(restoredCount);
   const [previousCount, setPreviousCount] = useState(null);
+  const previousRestoredRef = useRef(restoredCount);
 
   useEffect(() => {
-    if (restoredCount === visibleCount) return undefined;
+    const oldCount = previousRestoredRef.current;
+    if (restoredCount === oldCount) return undefined;
 
-    setPreviousCount(visibleCount);
+    setPreviousCount(oldCount);
     setVisibleCount(restoredCount);
+    previousRestoredRef.current = restoredCount;
     const timer = window.setTimeout(() => setPreviousCount(null), 900);
     return () => window.clearTimeout(timer);
-  }, [restoredCount, visibleCount]);
+  }, [restoredCount]);
 
   const layerPath = (count) => count < 5
     ? `/game/game2/Cap1_M${count}.webp`
