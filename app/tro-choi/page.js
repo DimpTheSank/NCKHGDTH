@@ -36,18 +36,22 @@ function GameHeaderfunction GameHeader({ onHome, compact = false }) {
 }
 
 function ZooScene({ restoredCount }) {
+  const [displayedProgress, setDisplayedProgress] = useState(restoredCount);
   const [fadingLayer, setFadingLayer] = useState(null);
-  const previousRestoredRef = useRef(restoredCount);
 
   useEffect(() => {
-    const previousCount = previousRestoredRef.current;
-    previousRestoredRef.current = restoredCount;
-    if (restoredCount <= previousCount) return undefined;
+    if (restoredCount <= displayedProgress) {
+      setDisplayedProgress(restoredCount);
+      return undefined;
+    }
 
-    setFadingLayer(Math.min(restoredCount - 1, 4));
-    const timer = window.setTimeout(() => setFadingLayer(null), 900);
+    setFadingLayer(Math.min(displayedProgress, 4));
+    const timer = window.setTimeout(() => {
+      setDisplayedProgress(restoredCount);
+      setFadingLayer(null);
+    }, 900);
     return () => window.clearTimeout(timer);
-  }, [restoredCount]);
+  }, [restoredCount, displayedProgress]);
 
   return (
     <figure className={styles.zooScene}>
@@ -58,7 +62,7 @@ function ZooScene({ restoredCount }) {
       />
       {[0, 1, 2, 3, 4].map((layer) => {
         const isFading = fadingLayer === layer;
-        const isRemoved = layer < restoredCount;
+        const isRemoved = layer < displayedProgress;
         return (
           <img
             key={layer}
