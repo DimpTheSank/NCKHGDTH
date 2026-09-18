@@ -610,3 +610,140 @@
   .flowerBed { right:-12px;bottom:4%;transform:scale(.72); }
   .butterflies { left:30%;transform:scale(.75); }
 }
+
+
+/* Game 3 - Thao Cam Vien image restoration and exercises */
+.zooScene {
+  min-height: 540px;
+  margin: 0;
+  border: 6px solid rgba(255,255,255,.86);
+  border-radius: 22px;
+  position: relative;
+  overflow: hidden;
+  background: #dceee4;
+  box-shadow: 0 15px 32px rgba(38,83,65,.12);
+}
+.zooSceneImage {
+  width: 100%;
+  height: 100%;
+  min-height: 540px;
+  display: block;
+  object-fit: cover;
+  animation: zooReveal .45s ease;
+}
+@keyframes zooReveal {
+  from { opacity: .35; transform: scale(1.015); }
+  to { opacity: 1; transform: scale(1); }
+}
+.exerciseBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  padding: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(18,48,38,.68);
+  backdrop-filter: blur(5px);
+}
+.exerciseCard {
+  width: min(680px,100%);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  padding: clamp(22px,4vw,38px);
+  border: 4px solid rgba(255,255,255,.75);
+  border-radius: 26px;
+  position: relative;
+  background: #fbfff9;
+  box-shadow: 0 28px 70px rgba(15,45,34,.3);
+}
+.exerciseClose {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  color: #567068;
+  background: #e8f3ec;
+  font-size: 24px;
+  cursor: pointer;
+}
+.exerciseEyebrow {
+  color: var(--green-600);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+.exerciseCard h2 {
+  max-width: 560px;
+  margin: 13px 44px 22px 0;
+  color: var(--ink);
+  font-size: clamp(20px,3vw,30px);
+  line-height: 1.3;
+}
+.answerGrid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 11px;
+}
+.answerGrid button {
+  min-height: 62px;
+  padding: 10px 13px;
+  border: 2px solid #dce9df;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  background: white;
+  text-align: left;
+  font-weight: 750;
+  cursor: pointer;
+}
+.answerGrid button span {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: #e8f3ec;
+  font-weight: 900;
+}
+.answerGrid .answerSelected {
+  border-color: var(--coral);
+  background: #fff7f1;
+  box-shadow: 0 7px 18px rgba(244,119,85,.14);
+}
+.feedbackCorrect, .feedbackWrong {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.feedbackCorrect { color: #24643d; background: #dcf3df; }
+.feedbackWrong { color: #a14c32; background: #ffebe3; }
+.exerciseActions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.continueButton {
+  min-height: 54px;
+  border: 2px solid #bddbc7;
+  border-radius: 16px;
+  padding: 0 20px;
+  color: var(--green-800);
+  background: white;
+  font-weight: 850;
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .zooScene, .zooSceneImage { min-height: 390px; }
+  .zooSceneImage { object-position: center; }
+  .answerGrid { grid-template-columns: 1fr; }
+  .exerciseCard { padding: 23px 16px 18px; border-width: 2px; border-radius: 20px; }
+}
