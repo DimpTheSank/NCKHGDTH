@@ -11,7 +11,8 @@
   "dependencies": {
     "next": "^15.3.3",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "firebase": "^12.3.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
