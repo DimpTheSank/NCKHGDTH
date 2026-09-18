@@ -12,6 +12,34 @@ const places = [
 
 const levelProgress = [5, 2, 0, 0, 0];
 
+const zooExercises = [
+  {
+    question: "Which animal has a very long neck?",
+    options: ["A tiger", "A giraffe", "A crocodile", "A penguin"],
+    answer: 1,
+  },
+  {
+    question: "Choose the correct sentence.",
+    options: ["The monkeys is climbing.", "The monkeys are climbing.", "The monkeys climbing.", "The monkeys are climb."],
+    answer: 1,
+  },
+  {
+    question: "What should visitors do to protect the animals?",
+    options: ["Feed them freely", "Make loud noises", "Follow the zoo rules", "Climb over the fence"],
+    answer: 2,
+  },
+  {
+    question: "Complete the sentence: The elephant is ___ than the monkey.",
+    options: ["big", "bigger", "biggest", "more big"],
+    answer: 1,
+  },
+  {
+    question: "Which action helps protect nature?",
+    options: ["Dropping litter", "Breaking branches", "Saving water", "Chasing animals"],
+    answer: 2,
+  },
+];
+
 function GameHeader({ onHome, compact = false }) {
   return (
     <header className={`${styles.subHeader} ${compact ? styles.compactHeader : ""}`}>
@@ -19,6 +47,26 @@ function GameHeader({ onHome, compact = false }) {
       <div className={styles.headerBrand}><span>BIỆT ĐỘI</span><strong>KIẾN TẠO SÀI GÒN</strong></div>
       <button className={styles.avatarButton} aria-label="Mở hồ sơ">HN<span>Hình nhân vật</span></button>
     </header>
+  );
+}
+
+function ZooScene({ restoredCount }) {
+  const imageName = restoredCount === 0 ? "Cap1_Nen.webp" : `Cap1_M${restoredCount}.webp`;
+  const imagePath = `/game/game3/cap1/${imageName}`;
+
+  return (
+    <figure className={styles.zooScene}>
+      <img
+        key={imagePath}
+        className={styles.zooSceneImage}
+        src={imagePath}
+        alt={restoredCount === 0 ? "Thảo Cầm Viên trước khi phục hồi" : `Thảo Cầm Viên sau khi hoàn thành màn ${restoredCount}`}
+      />
+      <figcaption className={styles.restoreCaption}>
+        <span>Phục hồi Thảo Cầm Viên</span>
+        <strong>{restoredCount}/5 hạng mục</strong>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -74,6 +122,10 @@ export default function GamePage() {
   const [activePlaceId, setActivePlaceId] = useState(null);
   const [activeLevel, setActiveLevel] = useState(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [zooProgress, setZooProgress] = useState(0);
+  const [exerciseStage, setExerciseStage] = useState(null);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [exerciseFeedback, setExerciseFeedback] = useState("");
 
   const activePlace = useMemo(
     () => places.find((place) => place.id === activePlaceId) || places[0],
@@ -105,7 +157,33 @@ export default function GamePage() {
   function goHome() {
     setActivePlaceId(null);
     setActiveLevel(null);
+    setExerciseStage(null);
     setScreen("map");
+  }
+
+  function openExercise(stage, locked) {
+    if (locked || activePlace.id !== "thao-cam-vien" || activeLevel !== 1) return;
+    setExerciseStage(stage);
+    setSelectedAnswer(null);
+    setExerciseFeedback("");
+  }
+
+  function submitExercise() {
+    if (selectedAnswer === null) {
+      setExerciseFeedback("Hãy chọn một đáp án trước khi kiểm tra.");
+      return;
+    }
+
+    const exercise = zooExercises[exerciseStage - 1];
+    if (selectedAnswer !== exercise.answer) {
+      setExerciseFeedback("Chưa chính xác. Em hãy thử lại nhé!");
+      return;
+    }
+
+    setExerciseFeedback("Chính xác! Một phần Thảo Cầm Viên đã được phục hồi.");
+    if (exerciseStage === zooProgress + 1) {
+      setZooProgress((progress) => Math.min(progress + 1, 5));
+    }
   }
 
   if (screen === "intro") {
@@ -153,8 +231,9 @@ export default function GamePage() {
           <div className={styles.levelsArea}>
             <div className={styles.levelCards}>
               {[1, 2, 3, 4, 5].map((level) => {
-                const completedStages = levelProgress[level - 1];
-                const isLocked = level > 2;
+                const isZooLevel = activePlace.id === "thao-cam-vien";
+                const completedStages = isZooLevel && level === 1 ? zooProgress : levelProgress[level - 1];
+                const isLocked = isZooLevel ? level > (zooProgress === 5 ? 2 : 1) : level > 2;
                 const earned = completedStages * activePlace.starsPerStage;
                 const total = 5 * activePlace.starsPerStage;
                 return (
@@ -185,7 +264,9 @@ export default function GamePage() {
   }
 
   if (screen === "stages") {
-    const stageProgress = activeLevel === 1 ? 5 : 2;
+    const stageProgress = activePlace.id === "thao-cam-vien" && activeLevel === 1
+      ? zooProgress
+      : activeLevel === 1 ? 5 : 2;
     return (
       <main className={styles.page}>
         <section className={styles.gameShell}>
@@ -196,7 +277,9 @@ export default function GamePage() {
             <span>{stageProgress * activePlace.starsPerStage}/{5 * activePlace.starsPerStage} ⭐</span>
           </div>
           <div className={styles.restorationLayout}>
-            {activePlace.id === "tao-dan" ? (
+            {activePlace.id === "thao-cam-vien" && activeLevel === 1 ? (
+              <ZooScene restoredCount={stageProgress} />
+            ) : activePlace.id === "tao-dan" ? (
               <TaoDanScene restoredCount={stageProgress} />
             ) : (
               <div className={styles.restorationScene}>
@@ -218,7 +301,12 @@ export default function GamePage() {
                 const current = stage === stageProgress + 1;
                 const locked = stage > stageProgress + 1;
                 return (
-                  <button key={stage} className={`${styles.stageButton} ${completed ? styles.stageDone : ""} ${current ? styles.stageCurrent : ""}`} disabled={locked}>
+                  <button
+                    key={stage}
+                    className={`${styles.stageButton} ${completed ? styles.stageDone : ""} ${current ? styles.stageCurrent : ""}`}
+                    disabled={locked}
+                    onClick={() => openExercise(stage, locked)}
+                  >
                     <span>{completed ? "✓" : locked ? "🔒" : "▶"}</span>
                     <div><strong>MÀN {stage}</strong><small>{activePlace.starsPerStage} SAO {completed ? "(M)" : locked ? "(K)" : "· SẴN SÀNG"}</small></div>
                     <b>{activePlace.starsPerStage} ⭐</b>
@@ -227,6 +315,44 @@ export default function GamePage() {
               })}
             </div>
           </div>
+
+          {exerciseStage && (
+            <div className={styles.exerciseBackdrop} onClick={() => setExerciseStage(null)}>
+              <article className={styles.exerciseCard} onClick={(event) => event.stopPropagation()}>
+                <button className={styles.exerciseClose} onClick={() => setExerciseStage(null)} aria-label="Đóng bài tập">×</button>
+                <span className={styles.exerciseEyebrow}>THẢO CẦM VIÊN · CẤP 1 · MÀN {exerciseStage}</span>
+                <h2>{zooExercises[exerciseStage - 1].question}</h2>
+                <div className={styles.answerGrid}>
+                  {zooExercises[exerciseStage - 1].options.map((option, index) => (
+                    <button
+                      key={option}
+                      className={selectedAnswer === index ? styles.answerSelected : ""}
+                      onClick={() => {
+                        setSelectedAnswer(index);
+                        setExerciseFeedback("");
+                      }}
+                    >
+                      <span>{String.fromCharCode(65 + index)}</span>
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                {exerciseFeedback && (
+                  <p className={exerciseFeedback.startsWith("Chính xác") ? styles.feedbackCorrect : styles.feedbackWrong}>
+                    {exerciseFeedback}
+                  </p>
+                )}
+                <div className={styles.exerciseActions}>
+                  <button className={styles.primaryButton} onClick={submitExercise}>Kiểm tra đáp án</button>
+                  {exerciseFeedback.startsWith("Chính xác") && (
+                    <button className={styles.continueButton} onClick={() => setExerciseStage(null)}>
+                      Xem cảnh phục hồi →
+                    </button>
+                  )}
+                </div>
+              </article>
+            </div>
+          )}
         </section>
       </main>
     );
