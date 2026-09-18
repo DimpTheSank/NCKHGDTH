@@ -51,17 +51,24 @@ function GameHeader({ onHome, compact = false }) {
 }
 
 function ZooScene({ restoredCount }) {
-  const imageName = restoredCount === 0 ? "Cap1_Nen.webp" : `Cap1_M${restoredCount}.webp`;
-  const imagePath = `/game/game3/cap1/${imageName}`;
-
   return (
     <figure className={styles.zooScene}>
       <img
-        key={imagePath}
-        className={styles.zooSceneImage}
-        src={imagePath}
-        alt={restoredCount === 0 ? "Thảo Cầm Viên trước khi phục hồi" : `Thảo Cầm Viên sau khi hoàn thành màn ${restoredCount}`}
+        className={`${styles.zooSceneImage} ${styles.zooBaseImage}`}
+        src="/game/game3/cap1/Cap1_Nen.webp"
+        alt="Cảnh nền Thảo Cầm Viên"
       />
+      {[1, 2, 3, 4, 5].map((stage) => (
+        stage <= restoredCount && (
+          <img
+            key={stage}
+            className={`${styles.zooSceneImage} ${styles.zooLayerImage}`}
+            src={`/game/game3/cap1/Cap1_M${stage}.webp`}
+            alt=""
+            aria-hidden="true"
+          />
+        )
+      ))}
       <figcaption className={styles.restoreCaption}>
         <span>Phục hồi Thảo Cầm Viên</span>
         <strong>{restoredCount}/5 hạng mục</strong>
