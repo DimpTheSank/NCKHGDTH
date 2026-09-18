@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/app/providers";
+import { db } from "@/lib/firebase";
 import styles from "./game.module.css";
 
 const places = [
@@ -13,35 +16,16 @@ const places = [
 
 const levelProgress = [5, 2, 0, 0, 0];
 
-const zooExercises = [
-  {
-    question: "Which animal has a very long neck?",
-    options: ["A tiger", "A giraffe", "A crocodile", "A penguin"],
-    answer: 1,
-  },
-  {
-    question: "Choose the correct sentence.",
-    options: ["The monkeys is climbing.", "The monkeys are climbing.", "The monkeys climbing.", "The monkeys are climb."],
-    answer: 1,
-  },
-  {
-    question: "What should visitors do to protect the animals?",
-    options: ["Feed them freely", "Make loud noises", "Follow the zoo rules", "Climb over the fence"],
-    answer: 2,
-  },
-  {
-    question: "Complete the sentence: The elephant is ___ than the monkey.",
-    options: ["big", "bigger", "biggest", "more big"],
-    answer: 1,
-  },
-  {
-    question: "Which action helps protect nature?",
-    options: ["Dropping litter", "Breaking branches", "Saving water", "Chasing animals"],
-    answer: 2,
-  },
-];
+function shuffleItems(items) {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+  }
+  return result;
+}
 
-function GameHeader({ onHome, compact = false }) {
+function GameHeaderfunction GameHeader({ onHome, compact = false }) {
   return (
     <header className={`${styles.subHeader} ${compact ? styles.compactHeader : ""}`}>
       <button className={styles.homeButton} onClick={onHome}><span>⌂</span> Trang chủ</button>
@@ -52,54 +36,40 @@ function GameHeader({ onHome, compact = false }) {
 }
 
 function ZooScene({ restoredCount }) {
-  const [visibleCount, setVisibleCount] = useState(restoredCount);
-  const [previousCount, setPreviousCount] = useState(null);
+  const [fadingLayer, setFadingLayer] = useState(null);
   const previousRestoredRef = useRef(restoredCount);
 
   useEffect(() => {
-    const oldCount = previousRestoredRef.current;
-    if (restoredCount === oldCount) return undefined;
-
-    setPreviousCount(oldCount);
-    setVisibleCount(restoredCount);
+    const previousCount = previousRestoredRef.current;
     previousRestoredRef.current = restoredCount;
-    const timer = window.setTimeout(() => setPreviousCount(null), 900);
+    if (restoredCount <= previousCount) return undefined;
+
+    setFadingLayer(Math.min(restoredCount - 1, 4));
+    const timer = window.setTimeout(() => setFadingLayer(null), 900);
     return () => window.clearTimeout(timer);
   }, [restoredCount]);
 
-  const layerPath = (count) => count < 5
-    ? `/game/game2/Cap1_M${count}.webp`
-    : null;
-  const currentLayer = layerPath(visibleCount);
-  const previousLayer = previousCount === null ? null : layerPath(previousCount);
-  const updating = previousCount !== null;
-
   return (
-    <figure className={`${styles.zooScene} ${updating ? styles.zooSceneUpdating : ""}`}>
+    <figure className={styles.zooScene}>
       <img
         className={`${styles.zooSceneImage} ${styles.zooBaseImage}`}
         src="/game/game2/Cap1_Nen.webp"
         alt="Cảnh nền Thảo Cầm Viên"
       />
-      {previousLayer && (
-        <img
-          key={`old-${previousLayer}`}
-          className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${styles.zooLayerExit}`}
-          src={previousLayer}
-          alt=""
-          aria-hidden="true"
-        />
-      )}
-      {currentLayer && (
-        <img
-          key={`new-${currentLayer}`}
-          className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${updating ? styles.zooLayerEnter : ""}`}
-          src={currentLayer}
-          alt=""
-          aria-hidden="true"
-        />
-      )}
-      {updating && <div className={styles.restoreGlow} aria-hidden="true"><i /><i /><i /><i /><i /></div>}
+      {[0, 1, 2, 3, 4].map((layer) => {
+        const isFading = fadingLayer === layer;
+        const isRemoved = layer < restoredCount;
+        return (
+          <img
+            key={layer}
+            className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${isFading ? styles.zooLayerExit : isRemoved ? styles.zooLayerHidden : ""}`}
+            src={`/game/game2/Cap1_M${layer}.webp`}
+            style={{ zIndex: layer + 2 }}
+            alt=""
+            aria-hidden="true"
+          />
+        );
+      })}
       <figcaption className={styles.restoreCaption}>
         <span>Phục hồi Thảo Cầm Viên</span>
         <strong>{restoredCount}/5 màn hoàn thành</strong>
@@ -108,7 +78,7 @@ function ZooScene({ restoredCount }) {
   );
 }
 
-function TaoDanScene({ restoredCount }) {
+function TaoDanScenefunction TaoDanScene({ restoredCount }) {
   const state = (step) => restoredCount >= step ? styles.objectRestored : styles.objectRuined;
 
   return (
@@ -155,6 +125,7 @@ function TaoDanScene({ restoredCount }) {
 }
 
 function GameContent() {
+  const { profile } = useAuth();
   const [screen, setScreen] = useState("intro");
   const [speechStep, setSpeechStep] = useState(0);
   const [activePlaceId, setActivePlaceId] = useState(null);
@@ -162,13 +133,34 @@ function GameContent() {
   const [soundOn, setSoundOn] = useState(true);
   const [zooProgress, setZooProgress] = useState(0);
   const [exerciseStage, setExerciseStage] = useState(null);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [stageQuestions, setStageQuestions] = useState([]);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [wordBank, setWordBank] = useState([]);
+  const [answerSlots, setAnswerSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const [exerciseFeedback, setExerciseFeedback] = useState("");
+  const [exerciseLoading, setExerciseLoading] = useState(false);
+  const [stagePassed, setStagePassed] = useState(false);
 
   const activePlace = useMemo(
     () => places.find((place) => place.id === activePlaceId) || places[0],
     [activePlaceId]
   );
+
+  useEffect(() => {
+    if (!profile?.uid || !db) return undefined;
+    let cancelled = false;
+
+    getDoc(doc(db, "users", profile.uid, "gameProgress", "game2"))
+      .then((snapshot) => {
+        if (cancelled || !snapshot.exists()) return;
+        const saved = Number(snapshot.data().completedStages ?? 0);
+        setZooProgress(Math.max(0, Math.min(saved, 5)));
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [profile?.uid]);
 
   const speeches = [
     "Một cơn bão ngôn từ đã quét qua thành phố khiến mọi thứ bị xáo trộn.",
@@ -196,39 +188,150 @@ function GameContent() {
     setActivePlaceId(null);
     setActiveLevel(null);
     setExerciseStage(null);
+    setStageQuestions([]);
     setScreen("map");
   }
 
-  function openExercise(stage, locked) {
+  function prepareQuestion(question) {
+    const segmentIndexes = question.segments.map((_, index) => index);
+    setWordBank(shuffleItems(segmentIndexes));
+    setAnswerSlots(Array(question.segments.length).fill(null));
+    setSelectedSlot(null);
+    setExerciseFeedback("");
+  }
+
+  async function openExercise(stage, locked) {
     if (locked || activePlace.id !== "thao-cam-vien" || activeLevel !== 1) return;
+
     setExerciseStage(stage);
-    setSelectedAnswer(null);
+    setStageQuestions([]);
+    setQuestionIndex(0);
+    setStagePassed(false);
+    setExerciseFeedback("");
+    setExerciseLoading(true);
+
+    try {
+      const snapshot = await getDocs(collection(
+        db,
+        "games", "game2",
+        "levels", "cap1",
+        "stages", `man${stage}`,
+        "questions"
+      ));
+      const questions = snapshot.docs
+        .map((questionDoc) => {
+          const data = questionDoc.data();
+          const segments = Array.isArray(data.segments) ? data.segments.filter(Boolean) : [];
+          const acceptedOrders = Array.isArray(data.acceptedOrders)
+            ? data.acceptedOrders.map((order) => Array.isArray(order) ? order.join(",") : String(order))
+            : [];
+          return {
+            id: questionDoc.id,
+            segments,
+            acceptedOrders: acceptedOrders.length
+              ? acceptedOrders
+              : [segments.map((_, index) => index).join(",")],
+            order: Number(data.order ?? 999),
+            active: data.active !== false,
+          };
+        })
+        .filter((question) => question.active && question.segments.length > 1)
+        .sort((first, second) => first.order - second.order)
+        .slice(0, 3);
+
+      if (questions.length !== 3) {
+        setExerciseFeedback(`Màn này cần đúng 3 câu hỏi trong Firestore. Hiện tìm thấy ${questions.length} câu.`);
+        return;
+      }
+
+      setStageQuestions(questions);
+      prepareQuestion(questions[0]);
+    } catch {
+      setExerciseFeedback("Không thể tải câu hỏi từ Firestore. Vui lòng kiểm tra kết nối và quyền đọc dữ liệu.");
+    } finally {
+      setExerciseLoading(false);
+    }
+  }
+
+  function chooseWord(segmentIndex) {
+    if (stagePassed) return;
+    const targetSlot = selectedSlot ?? answerSlots.findIndex((value) => value === null);
+    if (targetSlot < 0) {
+      setExerciseFeedback("Hãy nhấn vào một vị trí đã xếp để bỏ khối đó ra trước.");
+      return;
+    }
+
+    setAnswerSlots((slots) => slots.map((value, index) => index === targetSlot ? segmentIndex : value));
+    setWordBank((bank) => bank.filter((value) => value !== segmentIndex));
+    setSelectedSlot(null);
+    setExerciseFeedback("");
+  }
+
+  function clearSlot(slotIndex) {
+    if (stagePassed) return;
+    const segmentIndex = answerSlots[slotIndex];
+    if (segmentIndex === null) {
+      setSelectedSlot(slotIndex);
+      return;
+    }
+
+    setAnswerSlots((slots) => slots.map((value, index) => index === slotIndex ? null : value));
+    setWordBank((bank) => [...bank, segmentIndex]);
+    setSelectedSlot(slotIndex);
     setExerciseFeedback("");
   }
 
   function submitExercise() {
-    if (selectedAnswer === null) {
-      setExerciseFeedback("Hãy chọn một đáp án trước khi kiểm tra.");
+    if (answerSlots.some((value) => value === null)) {
+      setExerciseFeedback("Em hãy điền đủ các vị trí trước khi xác nhận.");
       return;
     }
 
-    const exercise = zooExercises[exerciseStage - 1];
-    if (selectedAnswer !== exercise.answer) {
-      setExerciseFeedback("Chưa chính xác. Em hãy thử lại nhé!");
+    const question = stageQuestions[questionIndex];
+    const submittedOrder = answerSlots.join(",");
+    if (!question.acceptedOrders.includes(submittedOrder)) {
+      setExerciseFeedback("Thứ tự chưa đúng. Em hãy nhấn vào khối cần đổi và thử lại nhé!");
       return;
     }
 
-    setExerciseFeedback("Chính xác! Một phần Thảo Cầm Viên đã được phục hồi.");
+    if (questionIndex < stageQuestions.length - 1) {
+      const nextIndex = questionIndex + 1;
+      setQuestionIndex(nextIndex);
+      prepareQuestion(stageQuestions[nextIndex]);
+      return;
+    }
+
+    setStagePassed(true);
+    setExerciseFeedback("Chính xác! Em đã hoàn thành cả 3 câu của màn này.");
   }
 
-  function finishExercise() {
-    if (exerciseStage === zooProgress + 1) {
-      setZooProgress((progress) => Math.min(progress + 1, 5));
-    }
+  async function finishExercise() {
+    const completedStages = Math.max(zooProgress, exerciseStage);
+    setZooProgress(completedStages);
     setExerciseStage(null);
+    setStageQuestions([]);
+    setStagePassed(false);
+
+    if (profile?.uid && db) {
+      try {
+        await setDoc(
+          doc(db, "users", profile.uid, "gameProgress", "game2"),
+          {
+            currentLevel: 1,
+            currentStage: Math.min(completedStages + 1, 5),
+            completedStages,
+            totalStars: completedStages * 2,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch {
+        // Tiến độ vẫn được cập nhật trong phiên nếu Firestore tạm thời không ghi được.
+      }
+    }
   }
 
-  if (screen === "intro") {
+  if (screen === "intro") {  if (screen === "intro") {
     return (
       <main className={styles.page}>
         <div className={styles.ambientOne} /><div className={styles.ambientTwo} />
@@ -363,35 +466,55 @@ function GameContent() {
               <article className={styles.exerciseCard} onClick={(event) => event.stopPropagation()}>
                 <button className={styles.exerciseClose} onClick={() => setExerciseStage(null)} aria-label="Đóng bài tập">×</button>
                 <span className={styles.exerciseEyebrow}>THẢO CẦM VIÊN · CẤP 1 · MÀN {exerciseStage}</span>
-                <h2>{zooExercises[exerciseStage - 1].question}</h2>
-                <div className={styles.answerGrid}>
-                  {zooExercises[exerciseStage - 1].options.map((option, index) => (
-                    <button
-                      key={option}
-                      className={selectedAnswer === index ? styles.answerSelected : ""}
-                      onClick={() => {
-                        setSelectedAnswer(index);
-                        setExerciseFeedback("");
-                      }}
-                    >
-                      <span>{String.fromCharCode(65 + index)}</span>
-                      {option}
-                    </button>
-                  ))}
-                </div>
-                {exerciseFeedback && (
-                  <p className={exerciseFeedback.startsWith("Chính xác") ? styles.feedbackCorrect : styles.feedbackWrong}>
-                    {exerciseFeedback}
-                  </p>
+
+                {exerciseLoading ? (
+                  <p className={styles.exerciseStatus}>Đang tải 3 câu hỏi từ Firestore...</p>
+                ) : stageQuestions.length ? (
+                  <>
+                    <div className={styles.questionCounter}>CÂU {questionIndex + 1} / {stageQuestions.length}</div>
+                    <h2>Sắp xếp các khối để tạo thành câu đúng</h2>
+                    <p className={styles.puzzleHint}>Nhấn một khối để đưa vào vị trí trống. Nhấn lại vị trí đã xếp để lấy khối ra.</p>
+
+                    <div className={styles.sentenceSlots} aria-label="Câu trả lời đang sắp xếp">
+                      {answerSlots.map((segmentIndex, slotIndex) => (
+                        <button
+                          key={slotIndex}
+                          className={`${styles.sentenceSlot} ${segmentIndex !== null ? styles.slotFilled : ""} ${selectedSlot === slotIndex ? styles.slotSelected : ""}`}
+                          onClick={() => clearSlot(slotIndex)}
+                        >
+                          <small>{slotIndex + 1}</small>
+                          <span>{segmentIndex === null ? "Chọn khối" : stageQuestions[questionIndex].segments[segmentIndex]}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className={styles.wordBank} aria-label="Các khối chưa sử dụng">
+                      {wordBank.map((segmentIndex) => (
+                        <button key={segmentIndex} className={styles.wordBlock} onClick={() => chooseWord(segmentIndex)}>
+                          {stageQuestions[questionIndex].segments[segmentIndex]}
+                        </button>
+                      ))}
+                    </div>
+
+                    {exerciseFeedback && (
+                      <p className={stagePassed ? styles.feedbackCorrect : styles.feedbackWrong}>
+                        {exerciseFeedback}
+                      </p>
+                    )}
+                    <div className={styles.exerciseActions}>
+                      {!stagePassed && (
+                        <button className={styles.primaryButton} onClick={submitExercise}>Xác nhận thứ tự</button>
+                      )}
+                      {stagePassed && (
+                        <button className={styles.continueButton} onClick={finishExercise}>
+                          Xem cảnh phục hồi →
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className={styles.feedbackWrong}>{exerciseFeedback || "Màn này chưa có đủ câu hỏi."}</p>
                 )}
-                <div className={styles.exerciseActions}>
-                  <button className={styles.primaryButton} onClick={submitExercise}>Kiểm tra đáp án</button>
-                  {exerciseFeedback.startsWith("Chính xác") && (
-                    <button className={styles.continueButton} onClick={finishExercise}>
-                      Xem cảnh phục hồi →
-                    </button>
-                  )}
-                </div>
               </article>
             </div>
           )}
