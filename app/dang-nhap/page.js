@@ -18,15 +18,15 @@ function messageForError(code) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading, configured } = useAuth();
-  const [email, setEmail] = useState("");
+  const { user, profile, loading, configured, authError } = useAuth();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace("/");
-  }, [loading, router, user]);
+    if (!loading && user && profile) router.replace("/");
+  }, [loading, profile, router, user]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -37,8 +37,9 @@ export default function LoginPage() {
     }
     setSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-      router.replace("/");
+      const identifier = username.trim().toLowerCase();
+      const email = identifier.includes("@") ? identifier : `${identifier}@admin.com`;
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (loginError) {
       setError(messageForError(loginError.code));
     } finally {
@@ -62,15 +63,17 @@ export default function LoginPage() {
           <p>Sử dụng tài khoản do giáo viên hoặc quản trị viên cung cấp.</p>
 
           <label>
-            Email
+            Tên đăng nhập
             <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="hocsinh@example.com"
-              autoComplete="email"
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="Ví dụ: hocsinh"
+              autoComplete="username"
+              spellCheck="false"
               required
             />
+            <small>Không cần nhập phần @admin.com</small>
           </label>
           <label>
             Mật khẩu
@@ -85,7 +88,7 @@ export default function LoginPage() {
           </label>
 
           {!configured && <div className={styles.warning}>Chưa có cấu hình Firebase trên môi trường này.</div>}
-          {error && <div className={styles.error}>{error}</div>}
+          {(error || authError) && <div className={styles.error}>{error || authError}</div>}
 
           <button type="submit" disabled={submitting}>
             {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
