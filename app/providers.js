@@ -28,7 +28,6 @@ export function AuthProvider({ children }) {
 
     return onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
-      setAuthError("");
 
       if (!currentUser) {
         setUser(null);
@@ -37,6 +36,7 @@ export function AuthProvider({ children }) {
         return;
       }
 
+      setAuthError("");
       try {
         const snapshot = await getDoc(doc(db, "users", currentUser.uid));
         if (!snapshot.exists()) {
