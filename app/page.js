@@ -6,8 +6,8 @@ import { useAuth } from "@/app/providers";
 import styles from "./home.module.css";
 
 function StudentHome() {
-  const { user, logout } = useAuth();
-  const displayName = user?.displayName || user?.email?.split("@")[0] || "Học sinh";
+  const { profile, logout } = useAuth();
+  const displayName = profile?.name || "Học sinh";
 
   async function handleLogout() {
     await logout();
@@ -24,8 +24,8 @@ function StudentHome() {
         <div>
           <span className={styles.greeting}>CHÀO MỪNG TRỞ LẠI</span>
           <h1>Xin chào, {displayName}!</h1>
-          <p>Hành trình khôi phục thành phố đang chờ em tiếp tục.</p>
-          <Link href="/tro-choi">Trang trò chơi <b>→</b></Link>
+          <p>{profile?.role === "student" ? "Hành trình khôi phục thành phố đang chờ em tiếp tục." : "Tài khoản giáo viên đã được xác thực."}</p>
+          {profile?.role === "student" && <Link href="/tro-choi">Trang trò chơi <b>→</b></Link>}
         </div>
         <div className={styles.mascot} aria-hidden="true">🦊</div>
       </section>
