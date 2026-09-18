@@ -4,7 +4,7 @@
   grid-template-columns: minmax(0,1.1fr) minmax(420px,.9fr);
   color: #183f32;
   background: linear-gradient(145deg,#dff4e5,#cdebed);
-  font-family: Arial,Helvetica,sans-serif;
+  font-family: var(--font-be-vietnam), "Segoe UI", Arial, sans-serif;
 }
 .visual {
   padding: clamp(42px,7vw,100px);
