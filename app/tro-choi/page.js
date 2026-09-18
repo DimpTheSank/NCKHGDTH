@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import styles from "./game.module.css";
 
 const places = [
@@ -125,7 +126,7 @@ function TaoDanScene({ restoredCount }) {
   );
 }
 
-export default function GamePage() {
+function GameContent() {
   const [screen, setScreen] = useState("intro");
   const [speechStep, setSpeechStep] = useState(0);
   const [activePlaceId, setActivePlaceId] = useState(null);
@@ -392,4 +393,9 @@ export default function GamePage() {
       </section>
     </main>
   );
+}
+
+
+export default function GamePage() {
+  return <ProtectedRoute><GameContent /></ProtectedRoute>;
 }
