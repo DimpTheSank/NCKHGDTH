@@ -64,6 +64,8 @@ export function AuthProvider({ children }) {
           email: data.email || currentUser.email,
           name: data.ten || data.displayName || currentUser.email?.split("@")[0] || "Người dùng",
           role,
+          className: data.lop || data.className || "Chưa cập nhật",
+          avatarUrl: data.anhDaiDien || data.avatarUrl || "",
           active: data.active !== false,
         });
       } catch {
