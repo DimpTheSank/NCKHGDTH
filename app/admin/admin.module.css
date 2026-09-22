@@ -3,7 +3,7 @@
   background: #f4f7f5;
   color: #17342b;
   padding: 32px;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-be-vietnam), "Segoe UI", Arial, sans-serif;
 }
 .header {
   display: flex;
