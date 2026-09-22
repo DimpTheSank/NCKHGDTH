@@ -67,7 +67,6 @@ export default function LoginPage() {
           <label>Tên đăng nhập
             <input type="text" value={username} onChange={(event) => setUsername(event.target.value)}
               placeholder="Ví dụ: HS-5A1-001" autoComplete="username" spellCheck="false" required />
-            <small>Không cần nhập phần @admin.com</small>
           </label>
           <label>Mật khẩu
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)}
