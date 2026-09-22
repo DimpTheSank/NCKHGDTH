@@ -8,12 +8,16 @@ import { useAuth } from "@/app/providers";
 import styles from "./login.module.css";
 
 function messageForError(code) {
-  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
-    return "Email hoặc mật khẩu chưa chính xác.";
-  }
-  if (code === "auth/invalid-email") return "Địa chỉ email không hợp lệ.";
+  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") return "Tên đăng nhập hoặc mật khẩu chưa chính xác.";
+  if (code === "auth/invalid-email") return "Tên đăng nhập không hợp lệ.";
   if (code === "auth/too-many-requests") return "Bạn thử quá nhiều lần. Vui lòng chờ một lúc rồi thử lại.";
   return "Không thể đăng nhập. Vui lòng thử lại.";
+}
+
+function homeForRole(role) {
+  if (role === "admin") return "/admin";
+  if (role === "teacher") return "/giao-vien";
+  return "/";
 }
 
 export default function LoginPage() {
@@ -25,7 +29,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && profile) router.replace(profile.role === "teacher" ? "/giao-vien" : "/");
+    if (!loading && user && profile) router.replace(homeForRole(profile.role));
   }, [loading, profile, router, user]);
 
   async function handleSubmit(event) {
@@ -55,44 +59,23 @@ export default function LoginPage() {
         <h1>Khôi phục thành phố<br />qua từng thử thách</h1>
         <p>Đăng nhập để tiếp tục hành trình và lưu tiến độ của em.</p>
       </section>
-
       <section className={styles.panel}>
         <form className={styles.card} onSubmit={handleSubmit}>
           <span className={styles.eyebrow}>CHÀO MỪNG TRỞ LẠI</span>
-          <h2>Đăng nhập học sinh</h2>
-          <p>Sử dụng tài khoản do giáo viên hoặc quản trị viên cung cấp.</p>
-
-          <label>
-            Tên đăng nhập
-            <input
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Ví dụ: hocsinh"
-              autoComplete="username"
-              spellCheck="false"
-              required
-            />
+          <h2>Đăng nhập hệ thống</h2>
+          <p>Sử dụng tài khoản do quản trị viên cung cấp.</p>
+          <label>Tên đăng nhập
+            <input type="text" value={username} onChange={(event) => setUsername(event.target.value)}
+              placeholder="Ví dụ: HS-5A1-001" autoComplete="username" spellCheck="false" required />
             <small>Không cần nhập phần @admin.com</small>
           </label>
-          <label>
-            Mật khẩu
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Nhập mật khẩu"
-              autoComplete="current-password"
-              required
-            />
+          <label>Mật khẩu
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)}
+              placeholder="Nhập mật khẩu" autoComplete="current-password" required />
           </label>
-
           {!configured && <div className={styles.warning}>Chưa có cấu hình Firebase trên môi trường này.</div>}
           {(error || authError) && <div className={styles.error}>{error || authError}</div>}
-
-          <button type="submit" disabled={submitting}>
-            {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
-          </button>
+          <button type="submit" disabled={submitting}>{submitting ? "Đang đăng nhập..." : "Đăng nhập"}</button>
         </form>
       </section>
     </main>
