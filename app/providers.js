@@ -8,9 +8,10 @@ import { auth, db, isFirebaseConfigured } from "@/lib/firebase";
 const AuthContext = createContext(null);
 
 function normalizeRole(value = "") {
-  const role = value.trim().toLocaleLowerCase("vi");
+  const role = String(value).trim().toLocaleLowerCase("vi");
   if (["học sinh", "hoc sinh", "student"].includes(role)) return "student";
   if (["giáo viên", "giao vien", "teacher"].includes(role)) return "teacher";
+  if (["quản trị", "quan tri", "admin"].includes(role)) return "admin";
   return null;
 }
 
@@ -28,7 +29,6 @@ export function AuthProvider({ children }) {
 
     return onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
-
       if (!currentUser) {
         setUser(null);
         setProfile(null);
@@ -78,11 +78,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(() => ({
-    user,
-    profile,
-    loading,
-    authError,
-    configured: isFirebaseConfigured,
+    user, profile, loading, authError, configured: isFirebaseConfigured,
     logout: () => auth ? signOut(auth) : Promise.resolve(),
   }), [user, profile, loading, authError]);
 
