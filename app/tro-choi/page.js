@@ -271,7 +271,7 @@ function GameContent() {
       setAccessMessage("Màn này chưa được giáo viên mở.");
       return;
     }
-    if (activePlace.id !== "thao-cam-vien" || activeLevel !== 1) return;
+    if (activePlace.id !== "thao-cam-vien" || ![1, 2].includes(activeLevel)) return;
 
     setExerciseStage(stage);
     setStageQuestions([]);
@@ -282,7 +282,7 @@ function GameContent() {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`/api/game-questions?gameId=game2&cap=1&man=${stage}`, {
+      const response = await fetch(`/api/game-questions?gameId=game2&cap=${activeLevel}&man=${stage}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const payload = await response.json().catch(() => ({}));
@@ -375,8 +375,10 @@ function GameContent() {
   }
 
   async function finishExercise() {
-    const completedStages = Math.max(zooProgress, exerciseStage);
-    setZooProgress(completedStages);
+    const currentProgress = activeLevel === 2 ? zooLevelTwoProgress : zooProgress;
+    const completedStages = Math.max(currentProgress, exerciseStage);
+    if (activeLevel === 2) setZooLevelTwoProgress(completedStages);
+    else setZooProgress(completedStages);
     setExerciseStage(null);
     setStageQuestions([]);
     setStagePassed(false);
@@ -386,10 +388,15 @@ function GameContent() {
         await setDoc(
           doc(db, "users", profile.uid, "gameProgress", "game2"),
           {
-            currentLevel: 1,
+            currentLevel: activeLevel,
             currentStage: Math.min(completedStages + 1, 5),
-            completedStages,
-            totalStars: completedStages * 2,
+            ...(activeLevel === 2
+              ? {
+                  level2CompletedStages: completedStages,
+                  progressByLevel: { cap2: completedStages },
+                }
+              : { completedStages }),
+            totalStars: (activeLevel === 2 ? zooProgress + completedStages : completedStages) * 2,
             updatedAt: serverTimestamp(),
           },
           { merge: true }
@@ -449,7 +456,8 @@ function GameContent() {
                 const completedStages = isZooLevel
                   ? level === 1 ? zooProgress : level === 2 ? zooLevelTwoProgress : 0
                   : levelProgress[level - 1];
-                const progressLocked = isZooLevel ? level > (zooProgress === 5 ? 2 : 1) : level > 2;
+                const unlockedZooLevel = zooProgress < 5 ? 1 : zooLevelTwoProgress < 5 ? 2 : 3;
+                const progressLocked = isZooLevel ? level > unlockedZooLevel : level > 2;
                 const teacherLocked = !activeAccess.enabled || level > activeAccess.maxCap;
                 const isLocked = progressLocked || teacherLocked;
                 const earned = completedStages * activePlace.starsPerStage;
@@ -543,7 +551,7 @@ function GameContent() {
             <div className={styles.exerciseBackdrop} onClick={() => setExerciseStage(null)}>
               <article className={styles.exerciseCard} onClick={(event) => event.stopPropagation()}>
                 <button className={styles.exerciseClose} onClick={() => setExerciseStage(null)} aria-label="Đóng bài tập">×</button>
-                <span className={styles.exerciseEyebrow}>THẢO CẦM VIÊN · CẤP 1 · MÀN {exerciseStage}</span>
+                <span className={styles.exerciseEyebrow}>THẢO CẦM VIÊN · CẤP {activeLevel} · MÀN {exerciseStage}</span>
 
                 {exerciseLoading ? (
                   <p className={styles.exerciseStatus}>Đang tải 3 câu hỏi từ Firestore...</p>
