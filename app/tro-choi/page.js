@@ -84,7 +84,7 @@ function ZooScene({ restoredCount }) {
   );
 }
 
-function ZooLevelTwoScene({ restoredCount }) {
+function ZooRestorationScene({ level, restoredCount }) {
   const [displayedProgress, setDisplayedProgress] = useState(restoredCount);
   const [appearingLayer, setAppearingLayer] = useState(null);
 
@@ -106,8 +106,8 @@ function ZooLevelTwoScene({ restoredCount }) {
     <figure className={styles.zooScene}>
       <img
         className={`${styles.zooSceneImage} ${styles.zooBaseImage}`}
-        src="/game/game2/G2C2Nen.webp"
-        alt="Cảnh nền Thảo Cầm Viên cấp 2"
+        src={`/game/game2/G2C${level}Nen.webp`}
+        alt={`Cảnh nền Thảo Cầm Viên cấp ${level}`}
       />
       {[1, 2, 3, 4, 5].map((layer) => {
         const isAppearing = appearingLayer === layer;
@@ -116,7 +116,7 @@ function ZooLevelTwoScene({ restoredCount }) {
           <img
             key={layer}
             className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${isAppearing ? styles.zooLayerEnter : isHidden ? styles.zooLayerHidden : ""}`}
-            src={`/game/game2/G2C2M${layer}.webp`}
+            src={`/game/game2/G2C${level}M${layer}.webp`}
             style={{ zIndex: 8 - layer }}
             alt=""
             aria-hidden="true"
@@ -124,7 +124,7 @@ function ZooLevelTwoScene({ restoredCount }) {
         );
       })}
       <figcaption className={styles.restoreCaption}>
-        <span>Phục hồi Thảo Cầm Viên · Cấp 2</span>
+        <span>Phục hồi Thảo Cầm Viên · Cấp {level}</span>
         <strong>{restoredCount}/5 màn hoàn thành</strong>
       </figcaption>
     </figure>
@@ -186,6 +186,7 @@ function GameContent() {
   const [soundOn, setSoundOn] = useState(true);
   const [zooProgress, setZooProgress] = useState(0);
   const [zooLevelTwoProgress, setZooLevelTwoProgress] = useState(0);
+  const [zooLevelThreeProgress, setZooLevelThreeProgress] = useState(0);
   const [exerciseStage, setExerciseStage] = useState(null);
   const [stageQuestions, setStageQuestions] = useState([]);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -233,6 +234,12 @@ function GameContent() {
           ?? 0
         );
         setZooLevelTwoProgress(Math.max(0, Math.min(savedLevelTwo, 5)));
+        const savedLevelThree = Number(
+          snapshot.data().level3CompletedStages
+          ?? snapshot.data().progressByLevel?.cap3
+          ?? 0
+        );
+        setZooLevelThreeProgress(Math.max(0, Math.min(savedLevelThree, 5)));
       })
       .catch(() => {});
 
@@ -292,7 +299,7 @@ function GameContent() {
       setAccessMessage("Màn này chưa được giáo viên mở.");
       return;
     }
-    if (activePlace.id !== "thao-cam-vien" || ![1, 2].includes(activeLevel)) return;
+    if (activePlace.id !== "thao-cam-vien" || ![1, 2, 3].includes(activeLevel)) return;
 
     setExerciseStage(stage);
     setStageQuestions([]);
@@ -396,9 +403,12 @@ function GameContent() {
   }
 
   async function finishExercise() {
-    const currentProgress = activeLevel === 2 ? zooLevelTwoProgress : zooProgress;
+    const currentProgress = activeLevel === 3
+      ? zooLevelThreeProgress
+      : activeLevel === 2 ? zooLevelTwoProgress : zooProgress;
     const completedStages = Math.max(currentProgress, exerciseStage);
-    if (activeLevel === 2) setZooLevelTwoProgress(completedStages);
+    if (activeLevel === 3) setZooLevelThreeProgress(completedStages);
+    else if (activeLevel === 2) setZooLevelTwoProgress(completedStages);
     else setZooProgress(completedStages);
     setExerciseStage(null);
     setStageQuestions([]);
@@ -411,13 +421,30 @@ function GameContent() {
           {
             currentLevel: activeLevel,
             currentStage: Math.min(completedStages + 1, 5),
-            ...(activeLevel === 2
+            ...(activeLevel === 3
+              ? {
+                  level3CompletedStages: completedStages,
+                  progressByLevel: {
+                    cap1: zooProgress,
+                    cap2: zooLevelTwoProgress,
+                    cap3: completedStages,
+                  },
+                }
+              : activeLevel === 2
               ? {
                   level2CompletedStages: completedStages,
-                  progressByLevel: { cap2: completedStages },
+                  progressByLevel: {
+                    cap1: zooProgress,
+                    cap2: completedStages,
+                    cap3: zooLevelThreeProgress,
+                  },
                 }
               : { completedStages }),
-            totalStars: (activeLevel === 2 ? zooProgress + completedStages : completedStages) * 2,
+            totalStars: (
+              activeLevel === 3
+                ? zooProgress + zooLevelTwoProgress + completedStages
+                : activeLevel === 2 ? zooProgress + completedStages : completedStages
+            ) * 2,
             updatedAt: serverTimestamp(),
           },
           { merge: true }
@@ -475,7 +502,7 @@ function GameContent() {
               {[1, 2, 3].map((level) => {
                 const isZooLevel = activePlace.id === "thao-cam-vien";
                 const completedStages = isZooLevel
-                  ? level === 1 ? zooProgress : level === 2 ? zooLevelTwoProgress : 0
+                  ? level === 1 ? zooProgress : level === 2 ? zooLevelTwoProgress : zooLevelThreeProgress
                   : levelProgress[level - 1];
                 const unlockedZooLevel = zooProgress < 5 ? 1 : zooLevelTwoProgress < 5 ? 2 : 3;
                 const progressLocked = isZooLevel ? level > unlockedZooLevel : level > 2;
@@ -512,7 +539,7 @@ function GameContent() {
 
   if (screen === "stages") {
     const stageProgress = activePlace.id === "thao-cam-vien"
-      ? activeLevel === 1 ? zooProgress : activeLevel === 2 ? zooLevelTwoProgress : 0
+      ? activeLevel === 1 ? zooProgress : activeLevel === 2 ? zooLevelTwoProgress : zooLevelThreeProgress
       : activeLevel === 1 ? 5 : 2;
     return (
       <main className={styles.page}>
@@ -526,8 +553,8 @@ function GameContent() {
           <div className={styles.restorationLayout}>
             {activePlace.id === "thao-cam-vien" && activeLevel === 1 ? (
               <ZooScene restoredCount={stageProgress} />
-            ) : activePlace.id === "thao-cam-vien" && activeLevel === 2 ? (
-              <ZooLevelTwoScene restoredCount={stageProgress} />
+            ) : activePlace.id === "thao-cam-vien" && [2, 3].includes(activeLevel) ? (
+              <ZooRestorationScene level={activeLevel} restoredCount={stageProgress} />
             ) : activePlace.id === "tao-dan" ? (
               <TaoDanScene restoredCount={stageProgress} />
             ) : (
