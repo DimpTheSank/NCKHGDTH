@@ -84,6 +84,32 @@ function ZooScene({ restoredCount }) {
   );
 }
 
+function ZooLevelTwoScene({ restoredCount }) {
+  return (
+    <figure className={styles.zooScene}>
+      <img
+        className={`${styles.zooSceneImage} ${styles.zooBaseImage}`}
+        src="/game/game2/G2C2Nen.webp"
+        alt="Cảnh nền Thảo Cầm Viên cấp 2"
+      />
+      {[1, 2, 3, 4, 5].map((layer) => (
+        <img
+          key={layer}
+          className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${layer > restoredCount ? styles.zooLayerHidden : ""}`}
+          src={`/game/game2/G2C2M${layer}.webp`}
+          style={{ zIndex: layer + 2 }}
+          alt=""
+          aria-hidden="true"
+        />
+      ))}
+      <figcaption className={styles.restoreCaption}>
+        <span>Phục hồi Thảo Cầm Viên · Cấp 2</span>
+        <strong>{restoredCount}/5 màn hoàn thành</strong>
+      </figcaption>
+    </figure>
+  );
+}
+
 function TaoDanScene({ restoredCount }) {
   const state = (step) => restoredCount >= step ? styles.objectRestored : styles.objectRuined;
 
@@ -138,6 +164,7 @@ function GameContent() {
   const [activeLevel, setActiveLevel] = useState(null);
   const [soundOn, setSoundOn] = useState(true);
   const [zooProgress, setZooProgress] = useState(0);
+  const [zooLevelTwoProgress, setZooLevelTwoProgress] = useState(0);
   const [exerciseStage, setExerciseStage] = useState(null);
   const [stageQuestions, setStageQuestions] = useState([]);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -179,6 +206,12 @@ function GameContent() {
         if (cancelled || !snapshot.exists()) return;
         const saved = Number(snapshot.data().completedStages ?? 0);
         setZooProgress(Math.max(0, Math.min(saved, 5)));
+        const savedLevelTwo = Number(
+          snapshot.data().level2CompletedStages
+          ?? snapshot.data().progressByLevel?.cap2
+          ?? 0
+        );
+        setZooLevelTwoProgress(Math.max(0, Math.min(savedLevelTwo, 5)));
       })
       .catch(() => {});
 
@@ -413,7 +446,9 @@ function GameContent() {
             <div className={styles.levelCards}>
               {[1, 2, 3].map((level) => {
                 const isZooLevel = activePlace.id === "thao-cam-vien";
-                const completedStages = isZooLevel && level === 1 ? zooProgress : levelProgress[level - 1];
+                const completedStages = isZooLevel
+                  ? level === 1 ? zooProgress : level === 2 ? zooLevelTwoProgress : 0
+                  : levelProgress[level - 1];
                 const progressLocked = isZooLevel ? level > (zooProgress === 5 ? 2 : 1) : level > 2;
                 const teacherLocked = !activeAccess.enabled || level > activeAccess.maxCap;
                 const isLocked = progressLocked || teacherLocked;
@@ -447,8 +482,8 @@ function GameContent() {
   }
 
   if (screen === "stages") {
-    const stageProgress = activePlace.id === "thao-cam-vien" && activeLevel === 1
-      ? zooProgress
+    const stageProgress = activePlace.id === "thao-cam-vien"
+      ? activeLevel === 1 ? zooProgress : activeLevel === 2 ? zooLevelTwoProgress : 0
       : activeLevel === 1 ? 5 : 2;
     return (
       <main className={styles.page}>
@@ -462,6 +497,8 @@ function GameContent() {
           <div className={styles.restorationLayout}>
             {activePlace.id === "thao-cam-vien" && activeLevel === 1 ? (
               <ZooScene restoredCount={stageProgress} />
+            ) : activePlace.id === "thao-cam-vien" && activeLevel === 2 ? (
+              <ZooLevelTwoScene restoredCount={stageProgress} />
             ) : activePlace.id === "tao-dan" ? (
               <TaoDanScene restoredCount={stageProgress} />
             ) : (
