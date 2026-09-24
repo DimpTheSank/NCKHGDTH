@@ -48,7 +48,7 @@ async function createOne(input, adminUid) {
   if (!accountCode) accountCode = await nextAccountCode(role, className);
   if (!/^[A-Z0-9-]{3,40}$/.test(accountCode)) throw new Error("Mã tài khoản chỉ gồm chữ, số và dấu gạch ngang.");
 
-  const email = `${accountCode.toLowerCase()}@admin.com`;
+  const email = `${accountCode.toLowerCase()}@nckhgdth.local`;
   const password = input.password || initialPassword();
   let createdUser;
 
