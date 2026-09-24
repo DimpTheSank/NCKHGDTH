@@ -207,6 +207,14 @@
   gap: 6px;
   white-space: nowrap;
 }
+.actions .danger {
+  border-color: #e8b8b0;
+  color: #a53627;
+  background: #fff7f5;
+}
+.actions .danger:hover {
+  background: #fbe3df;
+}
 .success,
 .error {
   max-width: 1400px;
