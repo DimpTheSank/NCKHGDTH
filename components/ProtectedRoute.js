@@ -4,6 +4,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers";
 
+function homeForRole(role) {
+  if (role === "admin") return "/admin";
+  if (role === "teacher") return "/giao-vien";
+  return "/";
+}
+
 export default function ProtectedRoute({ children, allowedRoles }) {
   const { user, profile, loading, configured } = useAuth();
   const router = useRouter();
@@ -14,7 +20,9 @@ export default function ProtectedRoute({ children, allowedRoles }) {
       router.replace("/dang-nhap");
       return;
     }
-    if (!loading && user && profile && !roleAllowed) router.replace("/");
+    if (!loading && user && profile && !roleAllowed) {
+      router.replace(homeForRole(profile.role));
+    }
   }, [configured, loading, profile, roleAllowed, router, user]);
 
   if (loading || !configured || !user || !profile || !roleAllowed) {
