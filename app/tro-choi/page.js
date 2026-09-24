@@ -47,7 +47,7 @@ function ZooScene({ restoredCount }) {
       return undefined;
     }
 
-    setFadingLayer(Math.min(displayedProgress, 4));
+    setFadingLayer(Math.min(displayedProgress + 1, 5));
     const timer = window.setTimeout(() => {
       setDisplayedProgress(restoredCount);
       setFadingLayer(null);
@@ -59,17 +59,17 @@ function ZooScene({ restoredCount }) {
     <figure className={styles.zooScene}>
       <img
         className={`${styles.zooSceneImage} ${styles.zooBaseImage}`}
-        src="/game/game2/Cap1_Nen.webp"
+        src="/game/game2/G2C1Nen.webp"
         alt="Cảnh nền Thảo Cầm Viên"
       />
-      {[0, 1, 2, 3, 4].map((layer) => {
+      {[1, 2, 3, 4, 5].map((layer) => {
         const isFading = fadingLayer === layer;
-        const isRemoved = layer < displayedProgress;
+        const isRemoved = layer <= displayedProgress;
         return (
           <img
             key={layer}
             className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${isFading ? styles.zooLayerExit : isRemoved ? styles.zooLayerHidden : ""}`}
-            src={`/game/game2/Cap1_M${layer}.webp`}
+            src={`/game/game2/G2C1M${layer}.webp`}
             style={{ zIndex: layer + 2 }}
             alt=""
             aria-hidden="true"
