@@ -10,7 +10,7 @@ export async function GET(request) {
   try {
     const url = new URL(request.url);
     const gameId = String(url.searchParams.get("gameId") || "");
-    const cap = Math.max(1, Math.min(5, Number(url.searchParams.get("cap")) || 1));
+    const cap = Math.max(1, Math.min(3, Number(url.searchParams.get("cap")) || 1));
     const man = Math.max(1, Math.min(5, Number(url.searchParams.get("man")) || 1));
     if (!/^game[1-4]$/.test(gameId)) {
       return Response.json({ error: "Trò chơi không hợp lệ." }, { status: 400 });
@@ -22,7 +22,7 @@ export async function GET(request) {
       : null;
     const permission = permissionSnapshot?.exists
       ? permissionSnapshot.data()
-      : { enabled: true, maxCap: 5, maxMan: 5 };
+      : { enabled: true, maxCap: 3, maxMan: 5 };
     const teacherLocked = permission.enabled === false
       || cap > Number(permission.maxCap || 1)
       || (cap === Number(permission.maxCap || 1) && man > Number(permission.maxMan || 1));

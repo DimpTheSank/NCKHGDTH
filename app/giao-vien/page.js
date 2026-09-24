@@ -255,7 +255,7 @@ function TeacherDashboard() {
         ) : (
           <div className={styles.accessGrid}>
             {Object.entries(gameNames).map(([accessGameId, name]) => {
-              const value = selectedClass?.gameAccess?.[accessGameId] || { enabled: true, maxCap: 5, maxMan: 5 };
+              const value = selectedClass?.gameAccess?.[accessGameId] || { enabled: true, maxCap: 3, maxMan: 5 };
               return (
                 <article className={styles.accessCard} key={accessGameId}>
                   <div><strong>{name}</strong><small>{accessGameId.toUpperCase()}</small></div>
@@ -267,7 +267,7 @@ function TeacherDashboard() {
                   <div className={styles.limitFields}>
                     <label>Cấp tối đa<select value={value.maxCap}
                       onChange={(event) => updateLocalAccess(accessGameId, { maxCap: Number(event.target.value) })}>
-                      {[1,2,3,4,5].map((number) => <option key={number} value={number}>Cấp {number}</option>)}
+                      {[1,2,3].map((number) => <option key={number} value={number}>Cấp {number}</option>)}
                     </select></label>
                     <label>Màn tối đa<select value={value.maxMan}
                       onChange={(event) => updateLocalAccess(accessGameId, { maxMan: Number(event.target.value) })}>
@@ -293,7 +293,7 @@ function TeacherDashboard() {
           </label>
           <label>Cấp
             <select value={levelId} onChange={(event) => setLevelId(event.target.value)}>
-              {[1,2,3,4,5].map((number) => <option key={number} value={`cap${number}`}>Cấp {number}</option>)}
+              {[1,2,3].map((number) => <option key={number} value={`cap${number}`}>Cấp {number}</option>)}
             </select>
           </label>
           <label>Màn

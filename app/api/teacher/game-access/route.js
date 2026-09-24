@@ -5,7 +5,15 @@ import { normalizeRole, requireUser } from "@/lib/admin-api";
 export const runtime = "nodejs";
 
 const GAME_IDS = ["game1", "game2", "game3", "game4"];
-const DEFAULT_ACCESS = { enabled: true, maxCap: 5, maxMan: 5 };
+const DEFAULT_ACCESS = { enabled: true, maxCap: 3, maxMan: 5 };
+
+function normalizeAccess(value = {}) {
+  return {
+    enabled: value.enabled !== false,
+    maxCap: Math.max(1, Math.min(3, Number(value.maxCap) || DEFAULT_ACCESS.maxCap)),
+    maxMan: Math.max(1, Math.min(5, Number(value.maxMan) || DEFAULT_ACCESS.maxMan)),
+  };
+}
 
 function teacherClasses(profile) {
   const values = Array.isArray(profile.classIds)
@@ -17,10 +25,7 @@ function teacherClasses(profile) {
 async function readAccess(classId) {
   const snapshot = await adminDb.collection("classes").doc(classId).collection("gameAccess").get();
   const saved = Object.fromEntries(snapshot.docs.map((item) => [item.id, item.data()]));
-  return Object.fromEntries(GAME_IDS.map((gameId) => [gameId, {
-    ...DEFAULT_ACCESS,
-    ...(saved[gameId] || {}),
-  }]));
+  return Object.fromEntries(GAME_IDS.map((gameId) => [gameId, normalizeAccess(saved[gameId])]));
 }
 
 export async function GET(request) {
@@ -70,7 +75,7 @@ export async function PUT(request) {
     }
 
     const enabled = body.enabled !== false;
-    const maxCap = Math.max(1, Math.min(5, Number(body.maxCap) || 1));
+    const maxCap = Math.max(1, Math.min(3, Number(body.maxCap) || 1));
     const maxMan = Math.max(1, Math.min(5, Number(body.maxMan) || 1));
     const classRef = adminDb.collection("classes").doc(classId);
     const gameRef = classRef.collection("gameAccess").doc(gameId);

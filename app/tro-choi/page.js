@@ -14,9 +14,9 @@ const places = [
   { id: "bach-dang", gameId: "game4", name: "Bến Bạch Đằng", shortName: "Bạch Đằng", icon: "⛵", className: "river", starsPerStage: 4, available: true, task: "Khôi phục bến sông và cảnh quan ven bờ." },
 ];
 
-const defaultGameAccess = { enabled: true, maxCap: 5, maxMan: 5 };
+const defaultGameAccess = { enabled: true, maxCap: 3, maxMan: 5 };
 
-const levelProgress = [5, 2, 0, 0, 0];
+const levelProgress = [5, 2, 0];
 
 function shuffleItems(items) {
   const result = [...items];
@@ -411,7 +411,7 @@ function GameContent() {
           </div>
           <div className={styles.levelsArea}>
             <div className={styles.levelCards}>
-              {[1, 2, 3, 4, 5].map((level) => {
+              {[1, 2, 3].map((level) => {
                 const isZooLevel = activePlace.id === "thao-cam-vien";
                 const completedStages = isZooLevel && level === 1 ? zooProgress : levelProgress[level - 1];
                 const progressLocked = isZooLevel ? level > (zooProgress === 5 ? 2 : 1) : level > 2;
