@@ -56,3 +56,26 @@ export async function PATCH(request, { params }) {
     return Response.json({ error: error.message || "Không thể cập nhật người dùng." }, { status: 400 });
   }
 }
+
+export async function DELETE(request, { params }) {
+  const access = await requireAdmin(request);
+  if (access.error) return access.error;
+  const { uid } = await params;
+
+  if (uid === access.decoded.uid) {
+    return Response.json({ error: "Bạn không thể tự xóa tài khoản Admin đang sử dụng." }, { status: 400 });
+  }
+
+  try {
+    try {
+      await adminAuth.deleteUser(uid);
+    } catch (error) {
+      if (error.code !== "auth/user-not-found") throw error;
+    }
+
+    await adminDb.recursiveDelete(adminDb.collection("users").doc(uid));
+    return Response.json({ success: true });
+  } catch (error) {
+    return Response.json({ error: error.message || "Không thể xóa tài khoản." }, { status: 400 });
+  }
+}
