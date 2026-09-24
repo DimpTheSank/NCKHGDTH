@@ -42,7 +42,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const identifier = username.trim().toLowerCase();
-      const email = identifier.includes("@") ? identifier : `${identifier}@admin.com`;
+      const email = identifier.includes("@") ? identifier : `${identifier}@nckhgdth.local`;
       await signInWithEmailAndPassword(auth, email, password);
     } catch (loginError) {
       setError(messageForError(loginError.code));
