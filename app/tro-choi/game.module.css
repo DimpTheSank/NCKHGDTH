@@ -211,6 +211,10 @@
     linear-gradient(145deg, #bfe4c1, #a9d9cf 56%, #9fd3dd);
   background-size: 28px 28px, 28px 28px, auto;
 }
+.accessNotice {
+  margin: 0 0 14px auto; width: min(820px,76%); padding: 11px 14px; border-radius: 12px;
+  color: #8a5311; background: #fff0c7; font-size: 12px; font-weight: 800;
+}
 
 .mapGrid {
   width: min(820px, 76%);

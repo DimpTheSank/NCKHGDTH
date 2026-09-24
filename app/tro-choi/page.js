@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/app/providers";
 import { db } from "@/lib/firebase";
 import styles from "./game.module.css";
 
 const places = [
-  { id: "tao-dan", name: "Công viên Tao Đàn", shortName: "Tao Đàn", icon: "🌳", className: "park", starsPerStage: 1, available: true, task: "Khôi phục khu vườn và đài phun nước." },
-  { id: "thao-cam-vien", name: "Thảo Cầm Viên", shortName: "Thảo Cầm Viên", icon: "🦒", className: "zoo", starsPerStage: 2, available: true, task: "Đưa cây xanh và muông thú trở lại." },
-  { id: "nha-hat", name: "Nhà hát Thành phố", shortName: "Nhà hát", icon: "🎭", className: "theater", starsPerStage: 3, available: true, task: "Khôi phục sân khấu và kiến trúc nhà hát." },
-  { id: "bach-dang", name: "Bến Bạch Đằng", shortName: "Bạch Đằng", icon: "⛵", className: "river", starsPerStage: 4, available: true, task: "Khôi phục bến sông và cảnh quan ven bờ." },
+  { id: "tao-dan", gameId: "game1", name: "Công viên Tao Đàn", shortName: "Tao Đàn", icon: "🌳", className: "park", starsPerStage: 1, available: true, task: "Khôi phục khu vườn và đài phun nước." },
+  { id: "thao-cam-vien", gameId: "game2", name: "Thảo Cầm Viên", shortName: "Thảo Cầm Viên", icon: "🦒", className: "zoo", starsPerStage: 2, available: true, task: "Đưa cây xanh và muông thú trở lại." },
+  { id: "nha-hat", gameId: "game3", name: "Nhà hát Thành phố", shortName: "Nhà hát", icon: "🎭", className: "theater", starsPerStage: 3, available: true, task: "Khôi phục sân khấu và kiến trúc nhà hát." },
+  { id: "bach-dang", gameId: "game4", name: "Bến Bạch Đằng", shortName: "Bạch Đằng", icon: "⛵", className: "river", starsPerStage: 4, available: true, task: "Khôi phục bến sông và cảnh quan ven bờ." },
 ];
+
+const defaultGameAccess = { enabled: true, maxCap: 5, maxMan: 5 };
 
 const levelProgress = [5, 2, 0, 0, 0];
 
@@ -129,7 +131,7 @@ function TaoDanScene({ restoredCount }) {
 }
 
 function GameContent() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [screen, setScreen] = useState("intro");
   const [speechStep, setSpeechStep] = useState(0);
   const [activePlaceId, setActivePlaceId] = useState(null);
@@ -145,11 +147,28 @@ function GameContent() {
   const [exerciseFeedback, setExerciseFeedback] = useState("");
   const [exerciseLoading, setExerciseLoading] = useState(false);
   const [stagePassed, setStagePassed] = useState(false);
+  const [gameAccess, setGameAccess] = useState({});
+  const [accessMessage, setAccessMessage] = useState("");
 
   const activePlace = useMemo(
     () => places.find((place) => place.id === activePlaceId) || places[0],
     [activePlaceId]
   );
+  const activeAccess = gameAccess[activePlace.gameId] || defaultGameAccess;
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    user.getIdToken()
+      .then((token) => fetch("/api/game-access", { headers: { Authorization: `Bearer ${token}` } }))
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Không thể tải quyền trò chơi.");
+        if (!cancelled) setGameAccess(data.gameAccess || {});
+      })
+      .catch((error) => { if (!cancelled) setAccessMessage(error.message); });
+    return () => { cancelled = true; };
+  }, [user]);
 
   useEffect(() => {
     if (!profile?.uid || !db) return undefined;
@@ -177,13 +196,21 @@ function GameContent() {
   }
 
   function openPlace(place) {
-    if (!place.available) return;
+    const permission = gameAccess[place.gameId] || defaultGameAccess;
+    if (!place.available || !permission.enabled) {
+      setAccessMessage("Trò chơi này đang được giáo viên khóa.");
+      return;
+    }
+    setAccessMessage("");
     setActivePlaceId(place.id);
     setScreen("levels");
   }
 
   function openLevel(level, isLocked) {
-    if (isLocked) return;
+    if (isLocked || level > activeAccess.maxCap) {
+      setAccessMessage("Cấp này chưa được giáo viên mở.");
+      return;
+    }
     setActiveLevel(level);
     setScreen("stages");
   }
@@ -205,7 +232,13 @@ function GameContent() {
   }
 
   async function openExercise(stage, locked) {
-    if (locked || activePlace.id !== "thao-cam-vien" || activeLevel !== 1) return;
+    const teacherLocked = activeLevel > activeAccess.maxCap
+      || (activeLevel === activeAccess.maxCap && stage > activeAccess.maxMan);
+    if (locked || teacherLocked || !activeAccess.enabled) {
+      setAccessMessage("Màn này chưa được giáo viên mở.");
+      return;
+    }
+    if (activePlace.id !== "thao-cam-vien" || activeLevel !== 1) return;
 
     setExerciseStage(stage);
     setStageQuestions([]);
@@ -215,16 +248,15 @@ function GameContent() {
     setExerciseLoading(true);
 
     try {
-      const snapshot = await getDocs(collection(
-        db,
-        "games", "game2",
-        "levels", "cap1",
-        "stages", `man${stage}`,
-        "questions"
-      ));
-      const questions = snapshot.docs
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/game-questions?gameId=game2&cap=1&man=${stage}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Không thể tải câu hỏi.");
+      const questions = (payload.questions || [])
         .map((questionDoc) => {
-          const data = questionDoc.data();
+          const data = questionDoc;
           const segments = Array.isArray(data.segments) ? data.segments.filter(Boolean) : [];
           const acceptedOrders = Array.isArray(data.acceptedOrders)
             ? data.acceptedOrders.map((order) => Array.isArray(order) ? order.join(",") : String(order))
@@ -250,8 +282,8 @@ function GameContent() {
 
       setStageQuestions(questions);
       prepareQuestion(questions[0]);
-    } catch {
-      setExerciseFeedback("Không thể tải câu hỏi từ Firestore. Vui lòng kiểm tra kết nối và quyền đọc dữ liệu.");
+    } catch (error) {
+      setExerciseFeedback(error.message || "Không thể tải câu hỏi từ Firestore.");
     } finally {
       setExerciseLoading(false);
     }
@@ -382,7 +414,9 @@ function GameContent() {
               {[1, 2, 3, 4, 5].map((level) => {
                 const isZooLevel = activePlace.id === "thao-cam-vien";
                 const completedStages = isZooLevel && level === 1 ? zooProgress : levelProgress[level - 1];
-                const isLocked = isZooLevel ? level > (zooProgress === 5 ? 2 : 1) : level > 2;
+                const progressLocked = isZooLevel ? level > (zooProgress === 5 ? 2 : 1) : level > 2;
+                const teacherLocked = !activeAccess.enabled || level > activeAccess.maxCap;
+                const isLocked = progressLocked || teacherLocked;
                 const earned = completedStages * activePlace.starsPerStage;
                 const total = 5 * activePlace.starsPerStage;
                 return (
@@ -400,7 +434,7 @@ function GameContent() {
                       <b>{isLocked ? "🔒" : completedStages === 5 ? "✓" : "▶"}</b>
                       <span>{earned}/{total} ⭐</span>
                     </div>
-                    <small>{isLocked ? "Chưa mở khóa" : completedStages === 5 ? "Đã hoàn thành" : "Tiếp tục"}</small>
+                    <small>{teacherLocked ? "Giáo viên chưa mở" : isLocked ? "Chưa mở khóa" : completedStages === 5 ? "Đã hoàn thành" : "Tiếp tục"}</small>
                   </button>
                 );
               })}
@@ -448,7 +482,10 @@ function GameContent() {
               {[1, 2, 3, 4, 5].map((stage) => {
                 const completed = stage <= stageProgress;
                 const current = stage === stageProgress + 1;
-                const locked = stage > stageProgress + 1;
+                const progressLocked = stage > stageProgress + 1;
+                const teacherLocked = !activeAccess.enabled || activeLevel > activeAccess.maxCap
+                  || (activeLevel === activeAccess.maxCap && stage > activeAccess.maxMan);
+                const locked = progressLocked || teacherLocked;
                 return (
                   <button
                     key={stage}
@@ -457,7 +494,7 @@ function GameContent() {
                     onClick={() => openExercise(stage, locked)}
                   >
                     <span>{completed ? "✓" : locked ? "🔒" : "▶"}</span>
-                    <div><strong>MÀN {stage}</strong><small>{activePlace.starsPerStage} SAO {completed ? "(M)" : locked ? "(K)" : "· SẴN SÀNG"}</small></div>
+                    <div><strong>MÀN {stage}</strong><small>{teacherLocked ? "GIÁO VIÊN CHƯA MỞ" : `${activePlace.starsPerStage} SAO ${completed ? "(M)" : locked ? "(K)" : "· SẴN SÀNG"}`}</small></div>
                     <b>{activePlace.starsPerStage} ⭐</b>
                   </button>
                 );
@@ -539,13 +576,19 @@ function GameContent() {
           </nav>
         </header>
         <div className={styles.mapArea}>
+          {accessMessage && <div className={styles.accessNotice}>{accessMessage}</div>}
           <div className={styles.mapGrid}>
-            {places.map((place) => (
-              <button key={place.id} className={`${styles.place} ${styles[place.className]}`} onClick={() => openPlace(place)}>
+            {places.map((place) => {
+              const teacherLocked = !(gameAccess[place.gameId] || defaultGameAccess).enabled;
+              return (
+              <button key={place.id} disabled={teacherLocked}
+                className={`${styles.place} ${styles[place.className]} ${teacherLocked ? styles.locked : ""}`}
+                onClick={() => openPlace(place)}>
                 <span className={styles.placeLabel}>{place.name}</span><span className={styles.pin}>📍</span>
-                <span className={styles.placeIcon}>{place.icon}</span><span className={styles.placeHint}>Chọn địa điểm</span>
+                <span className={styles.placeIcon}>{teacherLocked ? "🔒" : place.icon}</span>
+                <span className={styles.placeHint}>{teacherLocked ? "Giáo viên đang khóa" : "Chọn địa điểm"}</span>
               </button>
-            ))}
+            );})}
           </div>
           <aside className={styles.foxGuide}><span className={styles.mapFox}>🦊</span><div><strong>Cáo Đỏ</strong><p>Chọn một địa điểm để xem các cấp phục hồi nhé!</p></div></aside>
         </div>

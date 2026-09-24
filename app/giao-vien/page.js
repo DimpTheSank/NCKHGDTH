@@ -14,6 +14,23 @@ import { db } from "@/lib/firebase";
 import styles from "./teacher.module.css";
 
 const emptyQuestion = () => ({ rawSentence: "", alternativeOrders: "" });
+const gameNames = {
+  game1: "Công viên Tao Đàn",
+  game2: "Thảo Cầm Viên",
+  game3: "Nhà hát Thành phố",
+  game4: "Bến Bạch Đằng",
+};
+
+async function teacherRequest(user, options = {}) {
+  const token = await user.getIdToken();
+  const response = await fetch("/api/teacher/game-access", {
+    ...options,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Yêu cầu không thành công.");
+  return data;
+}
 
 const samples = {
   "game2-cap1-man1": [
@@ -51,19 +68,71 @@ function parseAlternativeOrders(value, segmentCount) {
 }
 
 function TeacherDashboard() {
-  const { profile, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const [gameId, setGameId] = useState("game2");
   const [levelId, setLevelId] = useState("cap1");
   const [stageId, setStageId] = useState("man1");
   const [questions, setQuestions] = useState([emptyQuestion(), emptyQuestion(), emptyQuestion()]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [classes, setClasses] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [accessFeedback, setAccessFeedback] = useState("");
 
   const locationKey = `${gameId}-${levelId}-${stageId}`;
   const questionPath = useMemo(
     () => ["games", gameId, "levels", levelId, "stages", stageId, "questions"],
     [gameId, levelId, stageId]
   );
+
+  useEffect(() => {
+    if (!user) return;
+    async function loadGameAccess() {
+      setAccessLoading(true);
+      try {
+        const data = await teacherRequest(user);
+        setClasses(data.classes || []);
+        setStudents(data.students || []);
+        setSelectedClassId((current) => current || data.classes?.[0]?.id || "");
+      } catch (error) {
+        setAccessFeedback(error.message);
+      } finally {
+        setAccessLoading(false);
+      }
+    }
+    loadGameAccess();
+  }, [user]);
+
+  const selectedClass = classes.find((item) => item.id === selectedClassId);
+
+  function updateLocalAccess(gameId, changes) {
+    setClasses((current) => current.map((classItem) => classItem.id === selectedClassId
+      ? { ...classItem, gameAccess: {
+        ...classItem.gameAccess,
+        [gameId]: { ...classItem.gameAccess[gameId], ...changes },
+      } }
+      : classItem));
+  }
+
+  async function saveGameAccess(gameId) {
+    const value = selectedClass?.gameAccess?.[gameId];
+    if (!value) return;
+    setAccessLoading(true);
+    setAccessFeedback("");
+    try {
+      await teacherRequest(user, {
+        method: "PUT",
+        body: JSON.stringify({ classId: selectedClassId, gameId, ...value }),
+      });
+      setAccessFeedback(`Đã cập nhật ${gameNames[gameId]} cho lớp ${selectedClassId}.`);
+    } catch (error) {
+      setAccessFeedback(error.message);
+    } finally {
+      setAccessLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!db) return;
@@ -169,6 +238,50 @@ function TeacherDashboard() {
           <p>Mỗi màn gồm đúng ba câu. Dùng dấu <b>/</b> để chia câu thành các khối cho học sinh sắp xếp.</p>
         </div>
         <div className={styles.teacherIcon} aria-hidden="true">👩‍🏫</div>
+      </section>
+
+      <section className={styles.accessPanel}>
+        <div className={styles.accessHeading}>
+          <div><span>KIỂM SOÁT TRÒ CHƠI</span><h2>Giới hạn màn được phép chơi</h2></div>
+          <label>Lớp phụ trách
+            <select value={selectedClassId} onChange={(event) => setSelectedClassId(event.target.value)}>
+              {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+        </div>
+
+        {!accessLoading && !classes.length ? (
+          <p className={styles.accessEmpty}>Tài khoản giáo viên chưa có <b>classIds</b>. Hãy liên hệ Admin để gán lớp phụ trách.</p>
+        ) : (
+          <div className={styles.accessGrid}>
+            {Object.entries(gameNames).map(([accessGameId, name]) => {
+              const value = selectedClass?.gameAccess?.[accessGameId] || { enabled: true, maxCap: 5, maxMan: 5 };
+              return (
+                <article className={styles.accessCard} key={accessGameId}>
+                  <div><strong>{name}</strong><small>{accessGameId.toUpperCase()}</small></div>
+                  <label className={styles.switchRow}>
+                    <input type="checkbox" checked={value.enabled}
+                      onChange={(event) => updateLocalAccess(accessGameId, { enabled: event.target.checked })} />
+                    <span>{value.enabled ? "Đang mở" : "Đang khóa"}</span>
+                  </label>
+                  <div className={styles.limitFields}>
+                    <label>Cấp tối đa<select value={value.maxCap}
+                      onChange={(event) => updateLocalAccess(accessGameId, { maxCap: Number(event.target.value) })}>
+                      {[1,2,3,4,5].map((number) => <option key={number} value={number}>Cấp {number}</option>)}
+                    </select></label>
+                    <label>Màn tối đa<select value={value.maxMan}
+                      onChange={(event) => updateLocalAccess(accessGameId, { maxMan: Number(event.target.value) })}>
+                      {[1,2,3,4,5].map((number) => <option key={number} value={number}>Màn {number}</option>)}
+                    </select></label>
+                  </div>
+                  <button onClick={() => saveGameAccess(accessGameId)} disabled={accessLoading || !selectedClassId}>Áp dụng</button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+        <p className={styles.classSummary}>Lớp {selectedClassId || "—"}: {students.filter((item) => item.className === selectedClassId).length} học sinh</p>
+        {accessFeedback && <div className={accessFeedback.startsWith("Đã") ? styles.success : styles.feedback}>{accessFeedback}</div>}
       </section>
 
       <form className={styles.workspace} onSubmit={saveQuestions}>
