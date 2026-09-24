@@ -85,6 +85,23 @@ function ZooScene({ restoredCount }) {
 }
 
 function ZooLevelTwoScene({ restoredCount }) {
+  const [displayedProgress, setDisplayedProgress] = useState(restoredCount);
+  const [appearingLayer, setAppearingLayer] = useState(null);
+
+  useEffect(() => {
+    if (restoredCount <= displayedProgress) {
+      setDisplayedProgress(restoredCount);
+      return undefined;
+    }
+
+    setAppearingLayer(Math.min(displayedProgress + 1, 5));
+    const timer = window.setTimeout(() => {
+      setDisplayedProgress(restoredCount);
+      setAppearingLayer(null);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [restoredCount, displayedProgress]);
+
   return (
     <figure className={styles.zooScene}>
       <img
@@ -92,16 +109,20 @@ function ZooLevelTwoScene({ restoredCount }) {
         src="/game/game2/G2C2Nen.webp"
         alt="Cảnh nền Thảo Cầm Viên cấp 2"
       />
-      {[1, 2, 3, 4, 5].map((layer) => (
-        <img
-          key={layer}
-          className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${layer > restoredCount ? styles.zooLayerHidden : ""}`}
-          src={`/game/game2/G2C2M${layer}.webp`}
-          style={{ zIndex: layer + 2 }}
-          alt=""
-          aria-hidden="true"
-        />
-      ))}
+      {[1, 2, 3, 4, 5].map((layer) => {
+        const isAppearing = appearingLayer === layer;
+        const isHidden = layer > displayedProgress && !isAppearing;
+        return (
+          <img
+            key={layer}
+            className={`${styles.zooSceneImage} ${styles.zooLayerImage} ${isAppearing ? styles.zooLayerEnter : isHidden ? styles.zooLayerHidden : ""}`}
+            src={`/game/game2/G2C2M${layer}.webp`}
+            style={{ zIndex: 8 - layer }}
+            alt=""
+            aria-hidden="true"
+          />
+        );
+      })}
       <figcaption className={styles.restoreCaption}>
         <span>Phục hồi Thảo Cầm Viên · Cấp 2</span>
         <strong>{restoredCount}/5 màn hoàn thành</strong>
