@@ -113,6 +113,27 @@ function AdminDashboard() {
     }
   }
 
+  async function deleteUser(item) {
+    const confirmed = window.confirm(
+      `Xóa vĩnh viễn tài khoản ${item.displayName || item.accountCode}?\n\n` +
+      "Tài khoản sẽ bị xóa khỏi cả Firebase Authentication và Firestore. Thao tác này không thể hoàn tác."
+    );
+    if (!confirmed) return;
+
+    setWorking(true);
+    setMessage({ type: "", text: "" });
+    try {
+      await adminRequest(user, `/api/admin/users/${item.uid}`, { method: "DELETE" });
+      setCreated((current) => current.filter((createdItem) => createdItem.uid !== item.uid));
+      setMessage({ type: "success", text: `Đã xóa tài khoản ${item.displayName || item.accountCode}.` });
+      await loadUsers();
+    } catch (error) {
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setWorking(false);
+    }
+  }
+
   function downloadCredentials() {
     const rows = [["Họ và tên", "Mã đăng nhập", "Mật khẩu", "Vai trò", "Lớp"],
       ...created.map((item) => [item.displayName, item.accountCode, item.password, item.role, item.className])];
@@ -186,6 +207,7 @@ function AdminDashboard() {
                 <td><div className={styles.actions}><button onClick={() => editUser(item)}>Sửa</button>
                   <button onClick={() => resetPassword(item)}>Reset MK</button>
                   <button onClick={() => updateUser(item, { ...item, active: !item.active })}>{item.active ? "Khóa" : "Mở khóa"}</button>
+                  {item.uid !== user.uid && <button className={styles.danger} onClick={() => deleteUser(item)} disabled={working}>Xóa</button>}
                 </div></td></tr>))}
             </tbody></table>
         </div>
